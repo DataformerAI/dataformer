@@ -1,0 +1,55 @@
+[project]
+name = "dataformer"
+description = "Dataformer is an library to create data for LLMs."
+readme = "README.md"
+requires-python = ">=3.8"
+license = "Apache-2.0"
+keywords = ["llm", "synthetic", "data"]
+authors = [{ name = "Dataformer AI", email = "contact@dataformer.ai" }]
+classifiers = [
+    "Development Status :: 0.0.1",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+    "pydantic >= 2.0",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+dev = ["ruff == 0.4.5", "pre-commit >= 3.5.0"]
+tests = [
+    "pytest >= 7.4.0",
+    "pytest-asyncio",
+    "nest-asyncio",
+    "pytest-timeout",
+    "pytest-codspeed",
+]
+
+# Optional LLMs etc
+openai = ["openai >= 1.0.0"]
+
+[project.urls]
+Documentation = "https://dataformer.ai/"
+Issues = "https://github.com/DataformerAI/dataformer/issues"
+Source = "https://github.com/DataformerAI/dataformer"
+
+[tool.hatch.version]
+path = "src/dataformer/__init__.py"
+
+[tool.ruff]
+line-length = 88
+exclude = ["docs"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "C", "B"]
+ignore = ["E501", "B905", "B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
