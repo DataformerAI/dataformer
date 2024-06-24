@@ -14,6 +14,11 @@ from dataclasses import (
 )  # for storing API inputs, outputs, and metadata
 import typing
 
+from dataformer.utils.notebook import in_notebook
+if in_notebook():
+    import nest_asyncio
+    nest_asyncio.apply()
+
 
 class OpenLLM:
     def __init__(self, api_key=None, base_url=None, api_provider="openai", model="gpt-3.5-turbo", max_requests_per_minute=20.0, max_tokens_per_minute=5000.0, max_attempts=5, token_encoding_name="cl100k_base", logging_level=logging.INFO, gen_type="chat"):
