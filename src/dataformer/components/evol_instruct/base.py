@@ -3,9 +3,9 @@ from typing import Any, Dict, List
 from dataformer.llms.openllm import OpenLLM
 from dataformer.components.evol_instruct.prompts import MUTATION_TEMPLATES
 
-class Evol_Instruct:
+class EvolInstruct:
     
-    def __init__(self, llm: OpenLLM, num_evolutions: int, store_evolutions: bool = False, generate_answers: bool = False, include_original_instruction: bool = False, mutation_templates: Dict[str, str] = MUTATION_TEMPLATES):
+    def __init__(self, llm: OpenLLM, num_evolutions: int = 1, store_evolutions: bool = False, generate_answers: bool = False, include_original_instruction: bool = False, mutation_templates: Dict[str, str] = MUTATION_TEMPLATES):
         self.llm = llm
         self.num_evolutions = num_evolutions
         self.store_evolutions = store_evolutions
