@@ -21,17 +21,24 @@ if in_notebook():
 
 
 class OpenLLM:
-    def __init__(self, api_key=None, base_url=None, api_provider="openai", model="gpt-3.5-turbo", max_requests_per_minute=20.0, max_tokens_per_minute=5000.0, max_attempts=5, token_encoding_name="cl100k_base", logging_level=logging.INFO, gen_type="chat"):
+    def __init__(self, api_key=None, base_url="", api_provider="openai", model="", max_requests_per_minute=20.0, max_tokens_per_minute=5000.0, max_attempts=5, token_encoding_name="cl100k_base", logging_level=logging.INFO, gen_type="chat"):
         self.api_key = api_key
         self.base_url = base_url
         self.api_provider = api_provider
-        self.model = model
         self.max_requests_per_minute = max_requests_per_minute
         self.max_tokens_per_minute = max_tokens_per_minute
         self.max_attempts = max_attempts
         self.token_encoding_name = token_encoding_name
         self.logging_level = logging_level
         self.gen_type = gen_type
+
+        if model:
+            self.model = model
+        else:
+            if api_provider == "openai" or "api.openai.com" in base_url:
+                self.model = "gpt-3.5-turbo"
+            else:
+                raise ValueError("Specify the model you want to use.")
 
     def get_request_url(self):
 
