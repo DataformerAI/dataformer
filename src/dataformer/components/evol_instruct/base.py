@@ -15,21 +15,19 @@ class Evol_Instruct:
 
     def evolve_instruction(self, instruction: str) -> List[str]:
         """Evolves an instruction based on the mutation templates."""
-        evolved_instructions = [instruction]
-        # Prepare all mutated instructions first
-        self.mutated_instructions = []
+        if self.include_original_instruction:
+            evolved_instructions = [instruction]
+        else:
+            evolved_instructions = []
+
         for _ in range(self.num_evolutions):
             mutation = random.choice(list(self.mutation_templates.values()))
             mutated_instruction = mutation.replace("<PROMPT>", instruction)
-            self.mutated_instructions.append(mutated_instruction)
-
-        # Generate all evolved instructions in one call
-        responses = self.llm.generate([{"model": self.llm.model, "messages": [{"role": "user", "content": mi}]} for mi in self.mutated_instructions])
-        
-        # Extract and store the evolved instructions
-        for response in responses:
-            evolved_instructions.append(response[2]['choices'][0]['message']['content'])
-
+            response = self.llm.generate([{"model": self.llm.model,"messages": [{"role": "user", "content": mutated_instruction}]}])
+            evolved_instruction = response[0][2]['choices'][0]['message']['content']
+            evolved_instructions.append(evolved_instruction)
+            instruction = evolved_instruction
+            
         if not self.store_evolutions:
             return [evolved_instructions[-1]]
         return evolved_instructions
@@ -37,6 +35,7 @@ class Evol_Instruct:
     def generate(self, instructions) -> List[Dict[str, Any]]:
         """Generates evolved instructions for a list of instructions."""
         self.results = []
+        all_messages = []
         for instruction in instructions:
             evolved = self.evolve_instruction(instruction)
             result = {
@@ -44,9 +43,20 @@ class Evol_Instruct:
                 "evolved_instructions": evolved
             }
             if self.generate_answers:
-                self.answers = []
-                answer = self.llm.generate([{"model": self.llm.model,"messages": [{"role": "user", "content": evolved_instruction}]} for evolved_instruction in evolved])
-                self.answers = [ans[2]['choices'][0]['message']['content'] for ans in answer]
-                result["answers"] = self.answers
+                # Prepare all messages for batch processing
+                all_messages.extend([{"model": self.llm.model, "messages": [{"role": "user", "content": ei}]} for ei in evolved])
             self.results.append(result)
+        
+        # Perform a single batch request for all messages
+        if self.generate_answers:
+            answers = self.llm.generate(all_messages)
+            answer_index = 0
+            if self.include_original_instruction:
+                num_answers = self.num_evolutions+1
+            else:
+                num_answers = self.num_evolutions
+            for result in self.results:
+                result["answers"] = [answers[i][2]['choices'][0]['message']['content'] for i in range(answer_index, answer_index + num_answers)]
+                answer_index += num_answers
+
         return self.results    
