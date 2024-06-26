@@ -165,3 +165,4 @@ exp/
 examples/*
 examples/*.ipynb
 !examples/*.py
+!examples/*.md
