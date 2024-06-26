@@ -16,14 +16,19 @@ class Evol_Instruct:
     def evolve_instruction(self, instruction: str) -> List[str]:
         """Evolves an instruction based on the mutation templates."""
         evolved_instructions = [instruction]
+        # Prepare all mutated instructions first
+        self.mutated_instructions = []
         for _ in range(self.num_evolutions):
             mutation = random.choice(list(self.mutation_templates.values()))
             mutated_instruction = mutation.replace("<PROMPT>", instruction)
-            # Generate evolved instruction using the LLM
-            response = self.llm.generate([{"model": self.llm.model,"messages": [{"role": "user", "content": mutated_instruction}]}])
-            evolved_instruction = response[0][2]['choices'][0]['message']['content']  # Assuming response is a list of strings
-            evolved_instructions.append(evolved_instruction)
-            instruction = evolved_instruction  # Update instruction for next iteration
+            self.mutated_instructions.append(mutated_instruction)
+
+        # Generate all evolved instructions in one call
+        responses = self.llm.generate([{"model": self.llm.model, "messages": [{"role": "user", "content": mi}]} for mi in self.mutated_instructions])
+        
+        # Extract and store the evolved instructions
+        for response in responses:
+            evolved_instructions.append(response[2]['choices'][0]['message']['content'])
 
         if not self.store_evolutions:
             return [evolved_instructions[-1]]
@@ -40,9 +45,8 @@ class Evol_Instruct:
             }
             if self.generate_answers:
                 self.answers = []
-                for evolved_instruction in evolved:
-                    answer = self.llm.generate([{"model": self.llm.model,"messages": [{"role": "user", "content": evolved_instruction}]}])
-                    self.answers.append(answer[0][2]['choices'][0]['message']['content'])
+                answer = self.llm.generate([{"model": self.llm.model,"messages": [{"role": "user", "content": evolved_instruction}]} for evolved_instruction in evolved])
+                self.answers = [ans[2]['choices'][0]['message']['content'] for ans in answer]
                 result["answers"] = self.answers
             self.results.append(result)
         return self.results    
