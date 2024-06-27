@@ -13,10 +13,10 @@ dataset = load_dataset("dataformer/self-knowledge")
 datasetsub = dataset['train'].select(range(5))
 instructions = [example['question'] for example in datasetsub]
 
-model = "gpt-3.5-turbo"
-request_list = [{"model": model, "messages": [{"role": "user", "content": prompt}]} for prompt in instructions]
 
-llm = OpenLLM()
+request_list = [{"messages": [{"role": "user", "content": prompt}]} for prompt in instructions]
+
+llm = OpenLLM(model = "gpt-3.5-turbo")
 response_list = llm.generate(request_list, save_filepath = 'chat.jsonl')
 
 for request, response in zip(request_list, response_list):
