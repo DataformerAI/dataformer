@@ -1,2 +1,2 @@
 # Dataformer
-Data for LLMs.
+Solving data for LLMs - Create, Curate & Clean.
