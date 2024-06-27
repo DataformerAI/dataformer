@@ -11,3 +11,6 @@ GROQ_API_KEY=""
 
 ## Evol Instruct
 `python -m examples.evol_instruct`
+
+## Evol Quality
+`python -m examples.evol_quality`
