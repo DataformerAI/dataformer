@@ -326,6 +326,10 @@ class OpenLLM:
                 save_filepath: str = None
                 ):
         
+        for request in request_list:
+            if "model" not in request:
+                request["model"] = self.model
+        
         self.response_list = []
     
         if save_filepath:
