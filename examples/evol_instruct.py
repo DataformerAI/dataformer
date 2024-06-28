@@ -10,13 +10,16 @@ from dataformer.components.evol_instruct.base import EvolInstruct
 from datasets import load_dataset
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 dataset = load_dataset("dataformer/self-knowledge")
-datasetsub = dataset['train'].select(range(2))
-instructions = [example['question'] for example in datasetsub]
+datasetsub = dataset["train"].select(range(2))
+instructions = [example["question"] for example in datasetsub]
 
-llm = OpenLLM(model="mixtral-8x7b-32768", api_provider="groq") # Make sure you have set "GROQ_API_KEY" in .env file.
+llm = OpenLLM(
+    model="mixtral-8x7b-32768", api_provider="groq"
+)  # Make sure you have set "GROQ_API_KEY" in .env file.
 
 evol_instruct = EvolInstruct(
     llm=llm,

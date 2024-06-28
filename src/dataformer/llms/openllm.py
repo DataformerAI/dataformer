@@ -20,11 +20,24 @@ from dataformer.utils.notebook import in_notebook
 
 if in_notebook():
     import nest_asyncio
+
     nest_asyncio.apply()
 
 
 class OpenLLM:
-    def __init__(self, api_key=None, base_url="", api_provider="openai", model="", max_requests_per_minute=20.0, max_tokens_per_minute=5000.0, max_attempts=5, token_encoding_name="cl100k_base", logging_level=logging.INFO, gen_type="chat"):
+    def __init__(
+        self,
+        api_key=None,
+        base_url="",
+        api_provider="openai",
+        model="",
+        max_requests_per_minute=20.0,
+        max_tokens_per_minute=5000.0,
+        max_attempts=5,
+        token_encoding_name="cl100k_base",
+        logging_level=logging.INFO,
+        gen_type="chat",
+    ):
         self.api_key = api_key
         self.base_url = base_url
         self.api_provider = api_provider
@@ -82,10 +95,7 @@ class OpenLLM:
         api_key = self.get_api_key()
         return request_url, api_key
 
-    async def process_api_requests(self,
-        request_list: list,
-        save_filepath: str
-        ):
+    async def process_api_requests(self, request_list: list, save_filepath: str):
         """Processes API requests in parallel, throttling to stay under rate limits."""
 
         request_url, api_key = self.get_requesturl_apikey()
@@ -197,7 +207,7 @@ class OpenLLM:
                                 retry_queue=queue_of_requests_to_retry,
                                 save_filepath=save_filepath,
                                 status_tracker=status_tracker,
-                                openllm_instance=self
+                                openllm_instance=self,
                             )
                         )
                         next_request = None  # reset next_request to empty
@@ -241,7 +251,6 @@ class OpenLLM:
                 f"{status_tracker.num_rate_limit_errors} rate limit errors received. Consider running at a lower rate."
             )
 
-
     def api_endpoint_from_url(self, request_url):
         """Extract the API endpoint from the request URL."""
         match = re.search("^https://[^/]+/v\\d+/(.+)$", request_url)
@@ -256,8 +265,8 @@ class OpenLLM:
         else:
             return match[1]
 
-
-    def num_tokens_consumed_from_request(self,
+    def num_tokens_consumed_from_request(
+        self,
         request_json: dict,
         api_endpoint: str,
         token_encoding_name: str,
@@ -279,7 +288,9 @@ class OpenLLM:
                     for key, value in message.items():
                         num_tokens += len(encoding.encode(value))
                         if key == "name":  # if there's a name, the role is omitted
-                            num_tokens -= 1  # role is always required and always 1 token
+                            num_tokens -= (
+                                1  # role is always required and always 1 token
+                            )
                 num_tokens += 2  # every reply is primed with <im_start>assistant
                 return num_tokens + completion_tokens
             # normal completions
@@ -316,7 +327,6 @@ class OpenLLM:
                 f'API endpoint "{api_endpoint}" not implemented in this script'
             )
 
-
     def task_id_generator_function(self):
         """Generate integers 0, 1, 2, and so on."""
         task_id = 0
@@ -324,10 +334,7 @@ class OpenLLM:
             yield task_id
             task_id += 1
 
-    def generate(self,
-                request_list: typing.List,
-                save_filepath: str = None
-                ):
+    def generate(self, request_list: typing.List, save_filepath: str = None):
 
         for request in request_list:
             if "model" not in request:
@@ -346,13 +353,12 @@ class OpenLLM:
             )
         )
 
-        sorted_response_list = sorted(self.response_list, key=lambda x: x[0]['idx'])
+        sorted_response_list = sorted(self.response_list, key=lambda x: x[0]["idx"])
         if save_filepath is not None:
             for data in sorted_response_list:
                 json_string = json.dumps(data)
                 with open(save_filepath, "a") as f:
                     f.write(json_string + "\n")
-
 
         return sorted_response_list
 
@@ -372,7 +378,7 @@ class StatusTracker:
 
 
 @dataclass
-class APIRequest():
+class APIRequest:
     """Stores an API request's inputs, outputs, and other metadata. Contains a method to make an API call."""
 
     task_id: int
@@ -390,10 +396,9 @@ class APIRequest():
         retry_queue: asyncio.Queue,
         save_filepath: str,
         status_tracker: StatusTracker,
-        openllm_instance
+        openllm_instance,
     ):
         """Calls the OpenAI API and saves results."""
-
 
         logging.info(f"Starting request #{self.task_id}")
         error = None
@@ -430,9 +435,18 @@ class APIRequest():
                     f"Request {self.request_json} failed after all attempts. Saving errors: {self.result}"
                 )
                 data = (
-                    [{'idx':self.task_id}, self.request_json, [str(e) for e in self.result], self.metadata]
+                    [
+                        {"idx": self.task_id},
+                        self.request_json,
+                        [str(e) for e in self.result],
+                        self.metadata,
+                    ]
                     if self.metadata
-                    else [{'idx':self.task_id}, self.request_json, [str(e) for e in self.result]]
+                    else [
+                        {"idx": self.task_id},
+                        self.request_json,
+                        [str(e) for e in self.result],
+                    ]
                 )
                 if data is not None:
                     openllm_instance.response_list.append(data)
@@ -440,9 +454,9 @@ class APIRequest():
                 status_tracker.num_tasks_failed += 1
         else:
             data = (
-                [{'idx':self.task_id}, self.request_json, response, self.metadata]
+                [{"idx": self.task_id}, self.request_json, response, self.metadata]
                 if self.metadata
-                else [{'idx':self.task_id}, self.request_json, response]
+                else [{"idx": self.task_id}, self.request_json, response]
             )
             if data is not None:
                 openllm_instance.response_list.append(data)
