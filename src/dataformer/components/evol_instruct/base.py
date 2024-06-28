@@ -1,10 +1,12 @@
 import random
 from typing import Any, Dict, List
-from dataformer.llms.openllm import OpenLLM
+
 from dataformer.components.evol_instruct.prompts import MUTATION_TEMPLATES
+from dataformer.llms.openllm import OpenLLM
+
 
 class EvolInstruct:
-    
+
     def __init__(self, llm: OpenLLM, num_evolutions: int = 1, store_evolutions: bool = False, generate_answers: bool = False, include_original_instruction: bool = False, mutation_templates: Dict[str, str] = MUTATION_TEMPLATES):
         self.llm = llm
         self.num_evolutions = num_evolutions
@@ -27,7 +29,7 @@ class EvolInstruct:
             evolved_instruction = response[0][2]['choices'][0]['message']['content']
             evolved_instructions.append(evolved_instruction)
             instruction = evolved_instruction
-            
+
         if not self.store_evolutions:
             return [evolved_instructions[-1]]
         return evolved_instructions
@@ -46,7 +48,7 @@ class EvolInstruct:
                 # Prepare all messages for batch processing
                 all_messages.extend([{"model": self.llm.model, "messages": [{"role": "user", "content": ei}]} for ei in evolved])
             self.results.append(result)
-        
+
         # Perform a single batch request for all messages
         if self.generate_answers:
             answers = self.llm.generate(all_messages)
@@ -59,4 +61,4 @@ class EvolInstruct:
                 result["answers"] = [answers[i][2]['choices'][0]['message']['content'] for i in range(answer_index, answer_index + num_answers)]
                 answer_index += num_answers
 
-        return self.results    
+        return self.results

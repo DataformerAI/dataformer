@@ -1,7 +1,9 @@
 import random
-from typing import Any, Dict, List
-from dataformer.llms.openllm import OpenLLM
+from typing import Dict, List
+
 from dataformer.components.evol_quality.prompts import MUTATION_TEMPLATES
+from dataformer.llms.openllm import OpenLLM
+
 
 class EvolQuality:
 
@@ -11,7 +13,7 @@ class EvolQuality:
         self.store_evolutions = store_evolutions
         self.include_original_response = include_original_response
         self.mutation_templates = mutation_templates
-        
+
     def evolve_responses(self, instruction: str, response: str) -> List[str]:
         """Evolves a response based on the mutation templates."""
         if self.include_original_response:
@@ -25,7 +27,7 @@ class EvolQuality:
             evolved_response = generation[0][2]['choices'][0]['message']['content']
             evolved_responses.append(evolved_response)
             response = evolved_response
-        
+
         if not self.store_evolutions:
             return [evolved_responses[-1]]
         else:

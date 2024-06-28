@@ -1,20 +1,23 @@
 # imports
-import aiohttp  # for making API calls concurrently
-import argparse  # for running script from command line
 import asyncio  # for running API calls concurrently
 import json  # for saving results to a jsonl file
 import logging  # for logging rate limit warnings and other messages
 import os  # for reading API key
 import re  # for matching endpoint from request URL
-import tiktoken  # for counting tokens
 import time  # for sleeping after rate limit is hit
+
+# for storing API inputs, outputs, and metadata
+import typing
 from dataclasses import (
     dataclass,
     field,
-)  # for storing API inputs, outputs, and metadata
-import typing
+)
+
+import aiohttp  # for making API calls concurrently
+import tiktoken  # for counting tokens
 
 from dataformer.utils.notebook import in_notebook
+
 if in_notebook():
     import nest_asyncio
     nest_asyncio.apply()
@@ -44,7 +47,7 @@ class OpenLLM:
 
         if self.base_url:
             return self.base_url
-        
+
         if self.api_provider:
             if "openai" in self.api_provider:
                 if self.gen_type == "chat":
@@ -57,9 +60,9 @@ class OpenLLM:
                 self.base_url = "https://api.groq.com/openai/v1/chat/completions"
             else:
                 raise ValueError("Invalid API Provider")
-            
+
         return self.base_url
-    
+
     def get_api_key(self):
 
         if self.api_key:
@@ -71,20 +74,20 @@ class OpenLLM:
                 return os.getenv("GROQ_API_KEY")
             else:
                 raise ValueError("Invalid API Key Provided")
-            
+
         return self.api_key
-    
+
     def get_requesturl_apikey(self):
         request_url = self.get_request_url()
         api_key = self.get_api_key()
         return request_url, api_key
-    
+
     async def process_api_requests(self,
         request_list: list,
         save_filepath: str
         ):
         """Processes API requests in parallel, throttling to stay under rate limits."""
-        
+
         request_url, api_key = self.get_requesturl_apikey()
 
         # constants
@@ -121,11 +124,11 @@ class OpenLLM:
 
         # initialize flags
         list_not_finished = True  # after list is empty, we'll skip reading it
-        logging.debug(f"Initialization complete.")
+        logging.debug("Initialization complete.")
 
         # initialize list reading
         requests = iter(request_list)
-        logging.debug(f"List opened. Entering main loop")
+        logging.debug("List opened. Entering main loop")
         async with aiohttp.ClientSession() as session:  # Initialize ClientSession here
             while True:
                 # get next request (if one is not already waiting for capacity)
@@ -238,7 +241,7 @@ class OpenLLM:
                 f"{status_tracker.num_rate_limit_errors} rate limit errors received. Consider running at a lower rate."
             )
 
-    
+
     def api_endpoint_from_url(self, request_url):
         """Extract the API endpoint from the request URL."""
         match = re.search("^https://[^/]+/v\\d+/(.+)$", request_url)
@@ -325,34 +328,34 @@ class OpenLLM:
                 request_list: typing.List,
                 save_filepath: str = None
                 ):
-        
+
         for request in request_list:
             if "model" not in request:
                 request["model"] = self.model
-        
+
         self.response_list = []
-    
+
         if save_filepath:
             with open(save_filepath, "w") as f:
                 pass
-        
+
         asyncio.run(
             self.process_api_requests(
                 request_list=request_list,
                 save_filepath=save_filepath,
             )
         )
-                  
+
         sorted_response_list = sorted(self.response_list, key=lambda x: x[0]['idx'])
         if save_filepath is not None:
             for data in sorted_response_list:
                 json_string = json.dumps(data)
                 with open(save_filepath, "a") as f:
                     f.write(json_string + "\n")
-        
-        
+
+
         return sorted_response_list
-    
+
 
 @dataclass
 class StatusTracker:
@@ -390,8 +393,8 @@ class APIRequest():
         openllm_instance
     ):
         """Calls the OpenAI API and saves results."""
-        
-        
+
+
         logging.info(f"Starting request #{self.task_id}")
         error = None
         try:
