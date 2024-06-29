@@ -40,7 +40,7 @@ class OpenLLM:
     ):
         self.api_key = api_key
         self.base_url = base_url
-        self.api_provider = api_provider
+        self.api_provider = api_provider.lower()
         self.max_requests_per_minute = max_requests_per_minute
         self.max_tokens_per_minute = max_tokens_per_minute
         self.max_attempts = max_attempts
@@ -51,16 +51,26 @@ class OpenLLM:
         if model:
             self.model = model
         else:
-            if api_provider == "openai" or "api.openai.com" in base_url:
+            if self.api_provider == "openai" or "api.openai.com" in base_url:
                 self.model = "gpt-3.5-turbo"
+            elif self.api_provider == "groq" or "api.groq.com" in base_url:
+                self.model = "mixtral-8x7b-32768"
+            elif self.api_provider == "anthropic" or "api.anthropic.com" in base_url:
+                self.model = "claude-2.1"
+            elif self.api_provider == "together" or "api.together.xyz" in base_url:
+                self.model = "mistralai/Mixtral-8x7B-Instruct-v0.1"
+            elif self.api_provider == "anyscale" or "api.endpoints.anyscale.com" in base_url:
+                self.model = "mistralai/Mistral-7B-Instruct-v0.1"
+            elif self.api_provider == "deepinfra" or "api.deepinfra.com" in base_url:
+                self.model = "meta-llama/Meta-Llama-3-8B-Instruct"
+            elif self.api_provider == "openrouter" or "openrouter.ai" in base_url:
+                self.model = "openai/gpt-3.5-turbo"
             else:
                 raise ValueError("Specify the model you want to use.")
 
     def get_request_url(self):
-
         if self.base_url:
             return self.base_url
-
         if self.api_provider:
             if "openai" in self.api_provider:
                 if self.gen_type == "chat":
@@ -71,13 +81,26 @@ class OpenLLM:
                     raise ValueError("Invalid gen_type provided")
             elif "groq" in self.api_provider:
                 self.base_url = "https://api.groq.com/openai/v1/chat/completions"
+            elif "anthropic" in self.api_provider:
+                if self.gen_type == "chat":
+                    self.base_url = "https://api.anthropic.com/v1/messages"
+                elif self.gen_type == "text":
+                    self.base_url = "https://api.anthropic.com/v1/complete"
+                else:
+                    raise ValueError("Invalid gen_type provided")
+            elif "together" in self.api_provider:
+                self.base_url = "https://api.together.xyz/v1/chat/completions"
+            elif "anyscale" in self.api_provider:
+                self.base_url = "https://api.endpoints.anyscale.com/v1/chat/completions"
+            elif "deepinfra" in self.api_provider:
+                self.base_url = "https://api.deepinfra.com/v1/openai/chat/completions"
+            elif "openrouter" in self.api_provider:
+                self.base_url = "https://openrouter.ai/api/v1/chat/completions"
             else:
                 raise ValueError("Invalid API Provider")
-
         return self.base_url
 
     def get_api_key(self):
-
         if self.api_key:
             return self.api_key
         else:
@@ -85,12 +108,21 @@ class OpenLLM:
                 return os.getenv("OPENAI_API_KEY")
             elif "api.groq.com" in self.base_url:
                 return os.getenv("GROQ_API_KEY")
+            elif "api.anthropic.com" in self.base_url:
+                return os.getenv("ANTHROPIC_API_KEY")
+            elif "api.together.xyz" in self.base_url:
+                return os.getenv("TOGETHER_API_KEY")
+            elif "api.endpoints.anyscale.com" in self.base_url:
+                return os.getenv("ANYSCALE_API_KEY")
+            elif "api.deepinfra.com" in self.base_url:
+                return os.getenv("DEEPINFRA_API_KEY")
+            elif "openrouter.ai" in self.base_url:
+                return os.getenv("OPENROUTER_API_KEY")
             else:
                 raise ValueError("Invalid API Key Provided")
-
         return self.api_key
 
-    def get_requesturl_apikey(self):
+    def get_requesturl_apikey(self) -> tuple[str, str]:
         request_url = self.get_request_url()
         api_key = self.get_api_key()
         return request_url, api_key
@@ -327,6 +359,7 @@ class OpenLLM:
                 f'API endpoint "{api_endpoint}" not implemented in this script'
             )
 
+
     def task_id_generator_function(self):
         """Generate integers 0, 1, 2, and so on."""
         task_id = 0
@@ -361,6 +394,7 @@ class OpenLLM:
                     f.write(json_string + "\n")
 
         return sorted_response_list
+
 
 
 @dataclass
