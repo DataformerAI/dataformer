@@ -1,8 +1,13 @@
-import os
-import sys
+from dataformer.components.evol_quality.base import EvolQuality
+from dataformer.llms.openllm import OpenLLM
+from datasets import load_dataset
+from dotenv import load_dotenv
 
-current_dir = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.path.join(current_dir, "../src"))
+load_dotenv()
+
+dataset = load_dataset("dataformer/self-knowledge")
+datasetsub = dataset["train"].select(range(2))
+instructions = [example["question"] for example in datasetsub]
 
 COLOR = {
     "RED": "\033[91m",
@@ -15,34 +20,15 @@ COLOR = {
     "ENDC": "\033[0m",
 }
 
-from dataformer.llms.openllm import OpenLLM
-from dataformer.components.evol_quality.base import EvolQuality
-from datasets import load_dataset
-
-from dotenv import load_dotenv
-
-load_dotenv()
-
-dataset = load_dataset("dataformer/self-knowledge")
-datasetsub = dataset["train"].select(range(2))
-instructions = [example["question"] for example in datasetsub]
-
-llm = OpenLLM(
-    model="mixtral-8x7b-32768", api_provider="groq"
-)  # Make sure you have set "GROQ_API_KEY" in .env file.
+llm = OpenLLM(model="mixtral-8x7b-32768", api_provider="groq")  # Make sure you have set "GROQ_API_KEY" in .env file.
 
 # Generating answers for the question first
-request_list = [
-    {"messages": [{"role": "user", "content": prompt}]} for prompt in instructions
-]
+request_list = [{"messages": [{"role": "user", "content": prompt}]} for prompt in instructions]
 answers = llm.generate(request_list)
 answers = [answer[2]["choices"][0]["message"]["content"] for answer in answers]
 
 # Formatting in required format for EvolQuality
-inputs = [
-    {"instruction": instruction, "response": response}
-    for instruction, response in zip(instructions, answers)
-]
+inputs = [{"instruction": instruction, "response": response} for instruction, response in zip(instructions, answers)]
 
 evol_quality = EvolQuality(
     llm=llm,
