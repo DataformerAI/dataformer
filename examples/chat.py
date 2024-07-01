@@ -16,22 +16,22 @@ instructions = [example['question'] for example in datasetsub]
 
 request_list = [{"messages": [{"role": "user", "content": prompt}]} for prompt in instructions]
 #Groq Provider
-#llm = OpenLLM(model = "mixtral-8x7b-32768",api_provider="groq", api_key = "")
+#llm = OpenLLM(model = "mixtral-8x7b-32768",api_provider="groq")
 #----------------------------------------------------------------------------------------------------------------------------------------
 #Anthropic
-#llm = OpenLLM(model = "claude-2.1",api_provider="anthropic", api_key = "")
+#llm = OpenLLM(model = "claude-2.1",api_provider="anthropic")
 #---------------------------------------------------------------------------------------------------------------------------------------
 #together
-#llm = OpenLLM(model = "mistralai/Mixtral-8x7B-Instruct-v0.1",api_provider="together", api_key = "")
+#llm = OpenLLM(model = "mistralai/Mixtral-8x7B-Instruct-v0.1",api_provider="together")
 #---------------------------------------------------------------------------------------------------------------------------------------
 #Anyscale
-#llm = OpenLLM(model = "mistralai/Mistral-7B-Instruct-v0.1",api_provider="anyscale", api_key = "")
+#llm = OpenLLM(model = "mistralai/Mistral-7B-Instruct-v0.1",api_provider="anyscale")
 #---------------------------------------------------------------------------------------------------------------------------------------
 #DeepInfra
-#llm = OpenLLM(model = "meta-llama/Meta-Llama-3-8B-Instruct",api_provider="deepinfra", api_key = "")
+#llm = OpenLLM(model = "meta-llama/Meta-Llama-3-8B-Instruct",api_provider="deepinfra")
 #---------------------------------------------------------------------------------------------------------------------------------------
 #OpenRouter
-#llm = OpenLLM(model = "openai/gpt-3.5-turbo",api_provider="openrouter", api_key = "")
+#llm = OpenLLM(model = "openai/gpt-3.5-turbo",api_provider="openrouter")
 #---------------------------------------------------------------------------------------------------------------------------------------
 #OpenApi
 llm = OpenLLM(model="gpt-3.5-turbo")
