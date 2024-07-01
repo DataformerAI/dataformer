@@ -9,7 +9,9 @@ datasetsub = dataset["train"].select(range(5))
 instructions = [example["question"] for example in datasetsub]
 
 
-request_list = [{"messages": [{"role": "user", "content": prompt}]} for prompt in instructions]
+request_list = [
+    {"messages": [{"role": "user", "content": prompt}]} for prompt in instructions
+]
 
 llm = OpenLLM(model="gpt-3.5-turbo")
 response_list = llm.generate(request_list, save_filepath="chat.jsonl")
