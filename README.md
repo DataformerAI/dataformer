@@ -4,11 +4,6 @@ Solving data for LLMs - Create, Curate & Clean.
 
 ## Installation
 
-Using PyPI: 
-```
-pip install dataformer
-```
-
 Github Source:
 ```
 pip install dataformer@git+https://github.com/DataformerAI/dataformer.git 

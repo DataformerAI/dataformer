@@ -1,4 +1,4 @@
-from dataformer.components.evol_instruct.base import EvolInstruct
+from dataformer.components.evol_instruct import EvolInstruct
 from dataformer.llms.openllm import OpenLLM
 from datasets import load_dataset
 from dotenv import load_dotenv

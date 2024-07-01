@@ -1,4 +1,4 @@
-from dataformer.components.evol_quality.base import EvolQuality
+from dataformer.components.evol_quality import EvolQuality
 from dataformer.llms.openllm import OpenLLM
 from datasets import load_dataset
 from dotenv import load_dotenv
