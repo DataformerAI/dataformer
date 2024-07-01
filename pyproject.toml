@@ -1,9 +1,13 @@
+[build-system]
+requires = ["setuptools>=61", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "dataformer"
 description = "Dataformer is an library to create data for LLMs."
 readme = "README.md"
 requires-python = ">=3.8"
-license = "Apache-2.0"
+license = { text = "Apache-2.0" }
 keywords = ["llm", "synthetic", "data"]
 authors = [{ name = "Dataformer AI", email = "contact@dataformer.ai" }]
 classifiers = [
@@ -18,7 +22,7 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-    "pydantic >= 2.0",
+    "pydantic >= 2.0", "tiktoken"
 ]
 dynamic = ["version"]
 
@@ -31,9 +35,11 @@ tests = [
     "pytest-timeout",
     "pytest-codspeed",
 ]
-
 # Optional LLMs etc
 openai = ["openai >= 1.0.0"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
 
 [project.urls]
 Documentation = "https://dataformer.ai/"

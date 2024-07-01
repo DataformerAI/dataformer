@@ -1,14 +1,6 @@
-import os
-import sys
-
-current_dir = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.path.join(current_dir, "../src"))
-
-
+from dataformer.components.evol_instruct import EvolInstruct
 from dataformer.llms.openllm import OpenLLM
-from dataformer.components.evol_instruct.base import EvolInstruct
 from datasets import load_dataset
-
 from dotenv import load_dotenv
 
 load_dotenv()

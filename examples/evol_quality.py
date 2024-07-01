@@ -1,8 +1,13 @@
-import os
-import sys
+from dataformer.components.evol_quality import EvolQuality
+from dataformer.llms.openllm import OpenLLM
+from datasets import load_dataset
+from dotenv import load_dotenv
 
-current_dir = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.path.join(current_dir, "../src"))
+load_dotenv()
+
+dataset = load_dataset("dataformer/self-knowledge")
+datasetsub = dataset["train"].select(range(2))
+instructions = [example["question"] for example in datasetsub]
 
 COLOR = {
     "RED": "\033[91m",
@@ -14,18 +19,6 @@ COLOR = {
     "WHITE": "\033[97m",
     "ENDC": "\033[0m",
 }
-
-from dataformer.llms.openllm import OpenLLM
-from dataformer.components.evol_quality.base import EvolQuality
-from datasets import load_dataset
-
-from dotenv import load_dotenv
-
-load_dotenv()
-
-dataset = load_dataset("dataformer/self-knowledge")
-datasetsub = dataset["train"].select(range(2))
-instructions = [example["question"] for example in datasetsub]
 
 llm = OpenLLM(
     model="mixtral-8x7b-32768", api_provider="groq"
