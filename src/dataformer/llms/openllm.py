@@ -5,6 +5,7 @@ import logging  # for logging rate limit warnings and other messages
 import os  # for reading API key
 import re  # for matching endpoint from request URL
 import time  # for sleeping after rate limit is hit
+import uuid # for sorting back the requests in original order.
 
 # for storing API inputs, outputs, and metadata
 import typing
@@ -336,6 +337,8 @@ class OpenLLM:
 
     def generate(self, request_list: typing.List, save_filepath: str = None):
 
+        self.gen_uuid = "uuid-" + str(uuid.uuid4())
+
         for request in request_list:
             if "model" not in request:
                 request["model"] = self.model
@@ -353,11 +356,13 @@ class OpenLLM:
             )
         )
 
-        sorted_response_list = sorted(self.response_list, key=lambda x: x[0]["idx"])
+        sorted_response_list = sorted(self.response_list, key=lambda x: x[0][self.gen_uuid])
+        sorted_response_list = [item[1:] for item in sorted_response_list]  # Exclude self.gen_uuid from the list
+
         if save_filepath is not None:
-            for data in sorted_response_list:
-                json_string = json.dumps(data)
-                with open(save_filepath, "a") as f:
+            with open(save_filepath, "w") as f:
+                for data in sorted_response_list:
+                    json_string = json.dumps(data)
                     f.write(json_string + "\n")
 
         return sorted_response_list
@@ -436,14 +441,14 @@ class APIRequest:
                 )
                 data = (
                     [
-                        {"idx": self.task_id},
+                        {openllm_instance.gen_uuid: self.task_id},
                         self.request_json,
                         [str(e) for e in self.result],
                         self.metadata,
                     ]
                     if self.metadata
                     else [
-                        {"idx": self.task_id},
+                        {openllm_instance.gen_uuid: self.task_id},
                         self.request_json,
                         [str(e) for e in self.result],
                     ]
@@ -454,11 +459,23 @@ class APIRequest:
                 status_tracker.num_tasks_failed += 1
         else:
             data = (
-                [{"idx": self.task_id}, self.request_json, response, self.metadata]
+                [{openllm_instance.gen_uuid: self.task_id}, self.request_json, response, self.metadata]
                 if self.metadata
-                else [{"idx": self.task_id}, self.request_json, response]
+                else [{openllm_instance.gen_uuid: self.task_id}, self.request_json, response]
             )
             if data is not None:
                 openllm_instance.response_list.append(data)
             status_tracker.num_tasks_in_progress -= 1
             status_tracker.num_tasks_succeeded += 1
+
+        # Save the response immediately after processing the request
+        if save_filepath is not None:
+            data = (
+                [{openllm_instance.gen_uuid: self.task_id}, self.request_json, response, self.metadata]
+                if self.metadata
+                else [{openllm_instance.gen_uuid: self.task_id}, self.request_json, response]
+            )
+            if data is not None:
+                json_string = json.dumps(data)
+                with open(save_filepath, "a") as f:
+                    f.write(json_string + "\n")
