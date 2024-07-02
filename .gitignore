@@ -166,3 +166,6 @@ examples/*
 examples/*.ipynb
 !examples/*.py
 !examples/*.md
+
+# Cache
+.cache/*

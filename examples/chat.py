@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 dataset = load_dataset("dataformer/self-knowledge")
-datasetsub = dataset["train"].select(range(5))
+datasetsub = dataset["train"].select(range(50))
 instructions = [example["question"] for example in datasetsub]
 
 
@@ -14,7 +14,7 @@ request_list = [
 ]
 
 llm = OpenLLM(model="gpt-3.5-turbo")
-response_list = llm.generate(request_list, save_filepath="chat.jsonl")
+response_list = llm.generate(request_list)
 
 for request, response in zip(request_list, response_list):
     prompt = request["messages"][0]["content"]

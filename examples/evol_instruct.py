@@ -15,11 +15,13 @@ llm = OpenLLM(
 
 evol_instruct = EvolInstruct(
     llm=llm,
-    num_evolutions=1,  # Number of times to evolve each instruction
+    num_evolutions=2,  # Number of times to evolve each instruction
     store_evolutions=True,  # Store all evolutions
     generate_answers=True,  # Generate answers for the evolved instructions
     # include_original_instruction=True  # Include the original instruction in the results
 )
-results = evol_instruct.generate(instructions)
+results = evol_instruct.generate(
+    instructions, use_cache=False
+)  # By default cache is True.
 
 print(results)

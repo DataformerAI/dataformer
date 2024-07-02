@@ -28,7 +28,7 @@ llm = OpenLLM(
 request_list = [
     {"messages": [{"role": "user", "content": prompt}]} for prompt in instructions
 ]
-answers = llm.generate(request_list)
+answers = llm.generate(request_list, use_cache=True)
 answers = [answer[-1]["choices"][0]["message"]["content"] for answer in answers]
 
 # Formatting in required format for EvolQuality
@@ -43,7 +43,7 @@ evol_quality = EvolQuality(
     store_evolutions=True,  # Store all evolutions, if False only final evolution is shown.
     include_original_response=False,  # Include the original response in evolved_responses
 )
-results = evol_quality.generate(inputs)
+results = evol_quality.generate(inputs, use_cache=False)
 
 print("\n\n")
 for result in results:

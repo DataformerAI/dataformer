@@ -3,10 +3,14 @@ from typing import Dict, List
 
 from dataformer.components.evol_quality.prompts import MUTATION_TEMPLATES
 from dataformer.llms.openllm import OpenLLM
+from dataformer.utils.cache import (
+    get_cache_vars,
+    get_request_details,
+    task_id_generator_function,
+)
 
 
 class EvolQuality:
-
     def __init__(
         self,
         llm: OpenLLM,
@@ -20,6 +24,7 @@ class EvolQuality:
         self.store_evolutions = store_evolutions
         self.include_original_response = include_original_response
         self.mutation_templates = mutation_templates
+        self.use_cache = True
 
     def evolve_responses(self, instruction: str, response: str) -> List[str]:
         """Evolves a response based on the mutation templates."""
@@ -38,7 +43,10 @@ class EvolQuality:
                         "model": self.llm.model,
                         "messages": [{"role": "user", "content": mutated_prompt}],
                     }
-                ]
+                ],
+                use_cache=self.use_cache,
+                cache_vars=self.cache_vars,
+                task_id_generator=self.task_id_generator,
             )
             evolved_response = generation[0][-1]["choices"][0]["message"]["content"]
             evolved_responses.append(evolved_response)
@@ -49,8 +57,29 @@ class EvolQuality:
         else:
             return evolved_responses
 
-    def generate(self, inputs):
+    def generate(self, inputs, use_cache: bool = True):
         """Generates evolved responses for a list of inputs containing instructions and responses."""
+
+        self.use_cache = use_cache
+
+        self.task_id_generator = task_id_generator_function()
+
+        self.request_details = get_request_details(
+            [
+                {
+                    "model": self.llm.model,
+                    "messages": [{"role": "user", "content": inputdata}],
+                }
+                for inputdata in inputs
+            ]
+        )
+
+        # Get cache_vars after initalizing all important variables
+        self.cache_vars = get_cache_vars(
+            self,
+            ignore_keys=["results", "task_id_generator", "cache_vars", "use_cache"],
+        )
+
         self.results = []
         for input in inputs:
             instruction, response = input["instruction"], input["response"]

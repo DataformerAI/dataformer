@@ -3,10 +3,14 @@ from typing import Any, Dict, List
 
 from dataformer.components.evol_instruct.prompts import MUTATION_TEMPLATES
 from dataformer.llms.openllm import OpenLLM
+from dataformer.utils.cache import (
+    get_cache_vars,
+    get_request_details,
+    task_id_generator_function,
+)
 
 
 class EvolInstruct:
-
     def __init__(
         self,
         llm: OpenLLM,
@@ -22,6 +26,7 @@ class EvolInstruct:
         self.generate_answers = generate_answers
         self.include_original_instruction = include_original_instruction
         self.mutation_templates = mutation_templates
+        self.use_cache = True
 
     def evolve_instruction(self, instruction: str) -> List[str]:
         """Evolves an instruction based on the mutation templates."""
@@ -39,7 +44,10 @@ class EvolInstruct:
                         "model": self.llm.model,
                         "messages": [{"role": "user", "content": mutated_instruction}],
                     }
-                ]
+                ],
+                use_cache=self.use_cache,
+                cache_vars=self.cache_vars,
+                task_id_generator=self.task_id_generator,
             )
             evolved_instruction = response[0][-1]["choices"][0]["message"]["content"]
             evolved_instructions.append(evolved_instruction)
@@ -49,8 +57,29 @@ class EvolInstruct:
             return [evolved_instructions[-1]]
         return evolved_instructions
 
-    def generate(self, instructions) -> List[Dict[str, Any]]:
+    def generate(self, instructions, use_cache: bool = True) -> List[Dict[str, Any]]:
         """Generates evolved instructions for a list of instructions."""
+
+        self.use_cache = use_cache
+
+        self.task_id_generator = task_id_generator_function()
+
+        self.request_details = get_request_details(
+            [
+                {
+                    "model": self.llm.model,
+                    "messages": [{"role": "user", "content": instruction}],
+                }
+                for instruction in instructions
+            ]
+        )
+
+        # Get cache_vars after initalizing all important variables
+        self.cache_vars = get_cache_vars(
+            self,
+            ignore_keys=["results", "task_id_generator", "cache_vars", "use_cache"],
+        )
+
         self.results = []
         all_messages = []
         for instruction in instructions:
@@ -74,7 +103,9 @@ class EvolInstruct:
 
         # Perform a single batch request for all messages
         if self.generate_answers:
-            answers = self.llm.generate(all_messages)
+            answers = self.llm.generate(
+                all_messages, use_cache=self.use_cache, cache_vars=self.cache_vars
+            )
             answer_index = 0
             if self.include_original_instruction:
                 num_answers = self.num_evolutions + 1

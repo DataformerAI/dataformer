@@ -5,7 +5,6 @@ import logging  # for logging rate limit warnings and other messages
 import os  # for reading API key
 import re  # for matching endpoint from request URL
 import time  # for sleeping after rate limit is hit
-import uuid # for sorting back the requests in original order.
 
 # for storing API inputs, outputs, and metadata
 import typing
@@ -17,6 +16,12 @@ from dataclasses import (
 import aiohttp  # for making API calls concurrently
 import tiktoken  # for counting tokens
 
+from dataformer.utils.cache import (
+    create_hash,
+    get_cache_vars,
+    get_request_details,
+    task_id_generator_function,
+)
 from dataformer.utils.notebook import in_notebook
 
 if in_notebook():
@@ -38,6 +43,7 @@ class OpenLLM:
         token_encoding_name="cl100k_base",
         logging_level=logging.INFO,
         gen_type="chat",
+        cache_dir=".cache",
     ):
         self.api_key = api_key
         self.base_url = base_url
@@ -48,6 +54,12 @@ class OpenLLM:
         self.token_encoding_name = token_encoding_name
         self.logging_level = logging_level
         self.gen_type = gen_type
+        self.skip_task_ids = []
+        self.cache_dir = cache_dir
+        self.task_id_generator = None
+
+        # initialize logging
+        logging.basicConfig(level=self.logging_level)
 
         if model:
             self.model = model
@@ -58,7 +70,6 @@ class OpenLLM:
                 raise ValueError("Specify the model you want to use.")
 
     def get_request_url(self):
-
         if self.base_url:
             return self.base_url
 
@@ -78,7 +89,6 @@ class OpenLLM:
         return self.base_url
 
     def get_api_key(self):
-
         if self.api_key:
             return self.api_key
         else:
@@ -96,10 +106,10 @@ class OpenLLM:
         api_key = self.get_api_key()
         return request_url, api_key
 
-    async def process_api_requests(self, request_list: list, save_filepath: str):
+    async def process_api_requests(
+        self, request_url: str, api_key: str, request_list: list, cache_filepath: str
+    ):
         """Processes API requests in parallel, throttling to stay under rate limits."""
-
-        request_url, api_key = self.get_requesturl_apikey()
 
         # constants
         seconds_to_pause_after_rate_limit_error = 15
@@ -107,8 +117,6 @@ class OpenLLM:
             0.001  # 1 ms limits max throughput to 1,000 requests per second
         )
 
-        # initialize logging
-        logging.basicConfig(level=self.logging_level)
         logging.debug(f"Logging initialized at level {self.logging_level}")
 
         # infer API endpoint and construct request header
@@ -120,9 +128,10 @@ class OpenLLM:
 
         # initialize trackers
         queue_of_requests_to_retry = asyncio.Queue()
-        task_id_generator = (
-            self.task_id_generator_function()
-        )  # generates integer IDs of 0, 1, 2, ...
+        if not self.task_id_generator:
+            self.task_id_generator = (
+                task_id_generator_function()
+            )  # generates integer IDs of 0, 1, 2, ...
         status_tracker = (
             StatusTracker()
         )  # single instance to track a collection of variables
@@ -153,8 +162,14 @@ class OpenLLM:
                         try:
                             # get new request
                             request_json = next(requests)
+                            active_task_id = next(self.task_id_generator)
+                            if active_task_id in self.skip_task_ids:
+                                logging.info(
+                                    f"[Cache Used] Skip request  {str(active_task_id)}"
+                                )
+                                continue
                             next_request = APIRequest(
-                                task_id=next(task_id_generator),
+                                task_id=active_task_id,
                                 request_json=request_json,
                                 token_consumption=self.num_tokens_consumed_from_request(
                                     request_json, api_endpoint, self.token_encoding_name
@@ -206,7 +221,7 @@ class OpenLLM:
                                 request_url=request_url,
                                 request_header=request_header,
                                 retry_queue=queue_of_requests_to_retry,
-                                save_filepath=save_filepath,
+                                cache_filepath=cache_filepath,
                                 status_tracker=status_tracker,
                                 openllm_instance=self,
                             )
@@ -238,14 +253,9 @@ class OpenLLM:
                         f"Pausing to cool down until {time.ctime(status_tracker.time_of_last_rate_limit_error + seconds_to_pause_after_rate_limit_error)}"
                     )
 
-        # after finishing, log final status
-        if save_filepath is not None:
-            logging.info(
-                f"""Parallel processing complete. Results saved to {save_filepath}"""
-            )
         if status_tracker.num_tasks_failed > 0:
             logging.warning(
-                f"{status_tracker.num_tasks_failed} / {status_tracker.num_tasks_started} requests failed. Errors logged to {save_filepath}."
+                f"{status_tracker.num_tasks_failed} / {status_tracker.num_tasks_started} requests failed."
             )
         if status_tracker.num_rate_limit_errors > 0:
             logging.warning(
@@ -328,42 +338,76 @@ class OpenLLM:
                 f'API endpoint "{api_endpoint}" not implemented in this script'
             )
 
-    def task_id_generator_function(self):
-        """Generate integers 0, 1, 2, and so on."""
-        task_id = 0
-        while True:
-            yield task_id
-            task_id += 1
+    def generate(
+        self,
+        request_list: typing.List,
+        cache_vars: typing.Dict = {},
+        task_id_generator=None,
+        use_cache=True,
+    ):
+        # Set base_url before any caching
+        request_url, api_key = self.get_requesturl_apikey()
 
-    def generate(self, request_list: typing.List, save_filepath: str = None):
+        if task_id_generator:
+            self.task_id_generator = task_id_generator
 
-        self.gen_uuid = "uuid-" + str(uuid.uuid4())
+        self.response_list = []
+
+        # If cache, add cached responses to self.response_list
+        if "request_details" not in cache_vars:
+            self.request_details = get_request_details(request_list)
+
+        cache_vars = get_cache_vars(
+            self,
+            ignore_keys=[
+                "cache_hash",
+                "skip_task_ids",
+                "task_id_generator",
+                "response_list",
+                "use_cache",
+            ],
+            additional_data=cache_vars,
+        )
+        # We create cache_hash to sort the async respones even when use_cache is False.
+        self.cache_hash = create_hash(cache_vars)
+
+        self.skip_task_ids = []
+        cache_filepath = None
+        if use_cache:
+            if not os.path.exists(self.cache_dir):
+                os.makedirs(self.cache_dir)
+            cache_filepath = f"{self.cache_dir}/{str(self.cache_hash)}.jsonl"
+
+            if os.path.exists(cache_filepath):
+                with open(cache_filepath, "r") as f:
+                    cached_responses = f.readlines()
+                cached_indices = []
+                for response in cached_responses:
+                    response_json = json.loads(response)
+                    self.response_list.append(response_json)
+                    if self.cache_hash in response_json[0].keys():
+                        cached_indices.append(response_json[0][self.cache_hash])
+                self.skip_task_ids = cached_indices
 
         for request in request_list:
             if "model" not in request:
                 request["model"] = self.model
 
-        self.response_list = []
-
-        if save_filepath:
-            with open(save_filepath, "w") as f:
-                pass
-
         asyncio.run(
             self.process_api_requests(
+                request_url,
+                api_key,
                 request_list=request_list,
-                save_filepath=save_filepath,
+                cache_filepath=cache_filepath,
             )
         )
 
-        sorted_response_list = sorted(self.response_list, key=lambda x: x[0][self.gen_uuid])
-        sorted_response_list = [item[1:] for item in sorted_response_list]  # Exclude self.gen_uuid from the list
-
-        if save_filepath is not None:
-            with open(save_filepath, "w") as f:
-                for data in sorted_response_list:
-                    json_string = json.dumps(data)
-                    f.write(json_string + "\n")
+        sorted_response_list = sorted(
+            self.response_list, key=lambda x: x[0][self.cache_hash]
+        )
+        sorted_response_list = [
+            item[1:] for item in sorted_response_list
+        ]  # Exclude self.cache_hash from the list
 
         return sorted_response_list
 
@@ -399,11 +443,14 @@ class APIRequest:
         request_url: str,
         request_header: dict,
         retry_queue: asyncio.Queue,
-        save_filepath: str,
+        cache_filepath: str,
         status_tracker: StatusTracker,
         openllm_instance,
     ):
         """Calls the OpenAI API and saves results."""
+
+        if self.task_id in openllm_instance.skip_task_ids:
+            return  # Skip request
 
         logging.info(f"Starting request #{self.task_id}")
         error = None
@@ -441,14 +488,14 @@ class APIRequest:
                 )
                 data = (
                     [
-                        {openllm_instance.gen_uuid: self.task_id},
+                        {openllm_instance.cache_hash: self.task_id},
                         self.request_json,
                         [str(e) for e in self.result],
                         self.metadata,
                     ]
                     if self.metadata
                     else [
-                        {openllm_instance.gen_uuid: self.task_id},
+                        {openllm_instance.cache_hash: self.task_id},
                         self.request_json,
                         [str(e) for e in self.result],
                     ]
@@ -459,9 +506,18 @@ class APIRequest:
                 status_tracker.num_tasks_failed += 1
         else:
             data = (
-                [{openllm_instance.gen_uuid: self.task_id}, self.request_json, response, self.metadata]
+                [
+                    {openllm_instance.cache_hash: self.task_id},
+                    self.request_json,
+                    response,
+                    self.metadata,
+                ]
                 if self.metadata
-                else [{openllm_instance.gen_uuid: self.task_id}, self.request_json, response]
+                else [
+                    {openllm_instance.cache_hash: self.task_id},
+                    self.request_json,
+                    response,
+                ]
             )
             if data is not None:
                 openllm_instance.response_list.append(data)
@@ -469,13 +525,22 @@ class APIRequest:
             status_tracker.num_tasks_succeeded += 1
 
         # Save the response immediately after processing the request
-        if save_filepath is not None:
+        if cache_filepath is not None:
             data = (
-                [{openllm_instance.gen_uuid: self.task_id}, self.request_json, response, self.metadata]
+                [
+                    {openllm_instance.cache_hash: self.task_id},
+                    self.request_json,
+                    response,
+                    self.metadata,
+                ]
                 if self.metadata
-                else [{openllm_instance.gen_uuid: self.task_id}, self.request_json, response]
+                else [
+                    {openllm_instance.cache_hash: self.task_id},
+                    self.request_json,
+                    response,
+                ]
             )
             if data is not None:
                 json_string = json.dumps(data)
-                with open(save_filepath, "a") as f:
+                with open(cache_filepath, "a") as f:
                     f.write(json_string + "\n")
