@@ -64,15 +64,28 @@ class OpenLLM:
         if model:
             self.model = model
         else:
-            if api_provider == "openai" or "api.openai.com" in base_url:
+            if self.api_provider == "openai" or "api.openai.com" in base_url:
                 self.model = "gpt-3.5-turbo"
+            elif self.api_provider == "groq" or "api.groq.com" in base_url:
+                self.model = "mixtral-8x7b-32768"
+            elif self.api_provider == "anthropic" or "api.anthropic.com" in base_url:
+                self.model = "claude-2.1"
+            elif self.api_provider == "together" or "api.together.xyz" in base_url:
+                self.model = "mistralai/Mixtral-8x7B-Instruct-v0.1"
+            elif self.api_provider == "anyscale" or "api.endpoints.anyscale.com" in base_url:  
+                self.model = "mistralai/Mistral-7B-Instruct-v0.1"
+            elif self.api_provider == "deepinfra" or "api.deepinfra.com" in base_url:
+                self.model = "meta-llama/Meta-Llama-3-8B-Instruct"
+            elif self.api_provider == "openrouter" or "openrouter.ai" in base_url:
+                self.model = "openai/gpt-3.5-turbo"
+            elif self.api_provider == "ollama" or "localhost" in base_url:
+                self.model = "llama3"
             else:
                 raise ValueError("Specify the model you want to use.")
 
     def get_request_url(self):
         if self.base_url:
             return self.base_url
-
         if self.api_provider:
             if "openai" in self.api_provider:
                 if self.gen_type == "chat":
@@ -83,9 +96,30 @@ class OpenLLM:
                     raise ValueError("Invalid gen_type provided")
             elif "groq" in self.api_provider:
                 self.base_url = "https://api.groq.com/openai/v1/chat/completions"
+            elif "anthropic" in self.api_provider:
+                if self.gen_type == "chat":
+                    self.base_url = "https://api.anthropic.com/v1/messages"
+                elif self.gen_type == "text":
+                    self.base_url = "https://api.anthropic.com/v1/complete"
+                else:
+                    raise ValueError("Invalid gen_type provided")
+            elif "together" in self.api_provider:
+                self.base_url = "https://api.together.xyz/v1/chat/completions"
+            elif "anyscale" in self.api_provider:
+                self.base_url = "https://api.endpoints.anyscale.com/v1/chat/completions"
+            elif "deepinfra" in self.api_provider:
+                self.base_url = "https://api.deepinfra.com/v1/openai/chat/completions"
+            elif "openrouter" in self.api_provider:
+                self.base_url = "https://openrouter.ai/api/v1/chat/completions"
+            elif "ollama" in self.api_provider:
+                if self.gen_type == "chat":
+                    self.base_url = "http://localhost:11434/api/chat"
+                elif self.gen_type == "text":
+                    self.base_url = "http://localhost:11434/api/generate"
+                else:
+                    raise ValueError("Invalid gen_type provided")
             else:
                 raise ValueError("Invalid API Provider")
-
         return self.base_url
 
     def get_api_key(self):
@@ -96,9 +130,20 @@ class OpenLLM:
                 return os.getenv("OPENAI_API_KEY")
             elif "api.groq.com" in self.base_url:
                 return os.getenv("GROQ_API_KEY")
+            elif "api.anthropic.com" in self.base_url:
+                return os.getenv("ANTHROPIC_API_KEY")
+            elif "api.together.xyz" in self.base_url:
+                return os.getenv("TOGETHER_API_KEY")
+            elif "api.endpoints.anyscale.com" in self.base_url:
+                return os.getenv("ANYSCALE_API_KEY")
+            elif "api.deepinfra.com" in self.base_url:
+                return os.getenv("DEEPINFRA_API_KEY")
+            elif "openrouter.ai" in self.base_url:
+                return os.getenv("OPENROUTER_API_KEY")
+            elif "localhost" in self.base_url:
+                return None  # Ollama doesn't require an API key
             else:
                 raise ValueError("Invalid API Key Provided")
-
         return self.api_key
 
     def get_requesturl_apikey(self):
@@ -110,7 +155,6 @@ class OpenLLM:
         self, request_url: str, api_key: str, request_list: list, cache_filepath: str
     ):
         """Processes API requests in parallel, throttling to stay under rate limits."""
-
         # constants
         seconds_to_pause_after_rate_limit_error = 15
         seconds_to_sleep_each_loop = (
@@ -214,6 +258,21 @@ class OpenLLM:
                         available_token_capacity -= next_request_tokens
                         next_request.attempts_left -= 1
 
+                        if "localhost" in request_url:
+                            # Ollama-specific request formatting
+                            if self.gen_type == "chat":
+                                ollama_request = {
+                                    "model": self.model,
+                                    "messages": [{ "role": "user", "content": next_request.request_json["messages"][-1]["content"] }]
+                                }
+                            elif self.gen_type == "text":
+                                ollama_request = {
+                                    "model": self.model,
+                                    "prompt": next_request.request_json["messages"][-1]["content"]
+                                }
+                            next_request.request_json = ollama_request
+                            request_header = {}  # Ollama doesn't require authentication
+                            
                         # call API
                         asyncio.create_task(
                             next_request.call_api(
@@ -224,6 +283,8 @@ class OpenLLM:
                                 cache_filepath=cache_filepath,
                                 status_tracker=status_tracker,
                                 openllm_instance=self,
+                                api_key=api_key,
+                                gen_type=self.gen_type
                             )
                         )
                         next_request = None  # reset next_request to empty
@@ -284,41 +345,152 @@ class OpenLLM:
     ):
         """Count the number of tokens in the request. Only supports completion and embedding requests."""
         encoding = tiktoken.get_encoding(token_encoding_name)
-        # if completions request, tokens = prompt + n * max_tokens
-        if api_endpoint.endswith("completions"):
+
+        # Handle different base URLs
+        base_url = self.base_url
+
+        # Define the logic to handle each base URL appropriately
+        if "api.openai.com" in base_url:
+            # if completions request, tokens = prompt + n * max_tokens
+            if api_endpoint.endswith("completions"):
+                max_tokens = request_json.get("max_tokens", 15)
+                n = request_json.get("n", 1)
+                completion_tokens = n * max_tokens
+
+                # chat completions
+                if "chat/" in api_endpoint:
+                    num_tokens = 0
+                    for message in request_json["messages"]:
+                        num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+                        for key, value in message.items():
+                            num_tokens += len(encoding.encode(value))
+                            if key == "name":  # if there's a name, the role is omitted
+                                num_tokens -= 1  # role is always required and always 1 token
+                    num_tokens += 2  # every reply is primed with <im_start>assistant
+                    return num_tokens + completion_tokens
+                else:  # normal completions
+                    prompt = request_json["prompt"]
+                    if isinstance(prompt, str):  # single prompt
+                        prompt_tokens = len(encoding.encode(prompt))
+                        num_tokens = prompt_tokens + completion_tokens
+                        return num_tokens
+                    elif isinstance(prompt, list):  # multiple prompts
+                        prompt_tokens = sum(len(encoding.encode(p)) for p in prompt)
+                        num_tokens = prompt_tokens + completion_tokens * len(prompt)
+                        return num_tokens
+                    else:
+                        raise TypeError(
+                            'Expecting either string or list of strings for "prompt" field in completion request'
+                        )
+
+        elif "api.groq.com" in base_url:
+            # Implement specific logic for Groq API token calculation
             max_tokens = request_json.get("max_tokens", 15)
             n = request_json.get("n", 1)
             completion_tokens = n * max_tokens
+            num_tokens = 0
+            for message in request_json["messages"]:
+                num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+                for key, value in message.items():
+                    num_tokens += len(encoding.encode(value))
+                    if key == "name":  # if there's a name, the role is omitted
+                        num_tokens -= 1  # role is always required and always 1 token
+                    num_tokens += 2  # every reply is primed with <im_start>assistant
+                    return num_tokens + completion_tokens
 
-            # chat completions
-            # if api_endpoint.startswith("chat/"):
-            if "chat/" in api_endpoint:
-                num_tokens = 0
-                for message in request_json["messages"]:
-                    num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
-                    for key, value in message.items():
-                        num_tokens += len(encoding.encode(value))
-                        if key == "name":  # if there's a name, the role is omitted
-                            num_tokens -= (
-                                1  # role is always required and always 1 token
-                            )
-                num_tokens += 2  # every reply is primed with <im_start>assistant
-                return num_tokens + completion_tokens
-            # normal completions
-            else:
-                prompt = request_json["prompt"]
-                if isinstance(prompt, str):  # single prompt
-                    prompt_tokens = len(encoding.encode(prompt))
-                    num_tokens = prompt_tokens + completion_tokens
-                    return num_tokens
-                elif isinstance(prompt, list):  # multiple prompts
-                    prompt_tokens = sum([len(encoding.encode(p)) for p in prompt])
-                    num_tokens = prompt_tokens + completion_tokens * len(prompt)
-                    return num_tokens
-                else:
-                    raise TypeError(
-                        'Expecting either string or list of strings for "prompt" field in completion request'
-                    )
+        elif "api.anthropic.com" in base_url:
+            # Implement specific logic for Anthropic API token calculation
+            max_tokens = request_json.get("max_tokens", 15)
+            n = request_json.get("n", 1)
+            completion_tokens = n * max_tokens
+            num_tokens = 0
+            for message in request_json["messages"]:
+                num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+                for key, value in message.items():
+                    num_tokens += len(encoding.encode(value))
+                    if key == "name":  # if there's a name, the role is omitted
+                        num_tokens -= 1  # role is always required and always 1 token
+                    num_tokens += 2  # every reply is primed with <im_start>assistant
+                    return num_tokens + completion_tokens
+
+        elif "api.together.xyz" in base_url:
+            # Implement specific logic for Together API token calculation
+            max_tokens = request_json.get("max_tokens", 15)
+            n = request_json.get("n", 1)
+            completion_tokens = n * max_tokens
+            num_tokens = 0
+            for message in request_json["messages"]:
+                num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+                for key, value in message.items():
+                    num_tokens += len(encoding.encode(value))
+                    if key == "name":  # if there's a name, the role is omitted
+                        num_tokens -= 1  # role is always required and always 1 token
+                    num_tokens += 2  # every reply is primed with <im_start>assistant
+                    return num_tokens + completion_tokens 
+
+        elif "api.endpoints.anyscale.com" in base_url:
+            # Implement specific logic for Anyscale API token calculation
+            max_tokens = request_json.get("max_tokens", 15)
+            n = request_json.get("n", 1)
+            completion_tokens = n * max_tokens
+            num_tokens = 0
+            for message in request_json["messages"]:
+                num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+                for key, value in message.items():
+                    num_tokens += len(encoding.encode(value))
+                    if key == "name":  # if there's a name, the role is omitted
+                        num_tokens -= 1  # role is always required and always 1 token
+                    num_tokens += 2  # every reply is primed with <im_start>assistant
+                    return num_tokens + completion_tokens
+
+        elif "api.deepinfra.com" in base_url:
+            # Implement specific logic for Deepinfra API token calculation
+            max_tokens = request_json.get("max_tokens", 15)
+            n = request_json.get("n", 1)
+            completion_tokens = n * max_tokens
+            num_tokens = 0
+            for message in request_json["messages"]:
+                num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+                for key, value in message.items():
+                    num_tokens += len(encoding.encode(value))
+                    if key == "name":  # if there's a name, the role is omitted
+                        num_tokens -= 1  # role is always required and always 1 token
+                    num_tokens += 2  # every reply is primed with <im_start>assistant
+                    return num_tokens + completion_tokens
+
+
+        elif "openrouter.ai" in base_url:
+            # Implement specific logic for OpenRouter API token calculation
+            max_tokens = request_json.get("max_tokens", 15)
+            n = request_json.get("n", 1)
+            completion_tokens = n * max_tokens
+            num_tokens = 0
+            for message in request_json["messages"]:
+                num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+                for key, value in message.items():
+                    num_tokens += len(encoding.encode(value))
+                    if key == "name":  # if there's a name, the role is omitted
+                        num_tokens -= 1  # role is always required and always 1 token
+                    num_tokens += 2  # every reply is primed with <im_start>assistant
+                    return num_tokens + completion_tokens
+
+        
+        elif "localhost" in base_url:
+            # Implement specific logic for OpenRouter API token calculation
+            max_tokens = request_json.get("max_tokens", 15)
+            n = request_json.get("n", 1)
+            completion_tokens = n * max_tokens
+            num_tokens = 0
+            for message in request_json["messages"]:
+                num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+                for key, value in message.items():
+                    num_tokens += len(encoding.encode(value))
+                    if key == "name":  # if there's a name, the role is omitted
+                        num_tokens -= 1  # role is always required and always 1 token
+                    num_tokens += 2  # every reply is primed with <im_start>assistant
+                    return num_tokens + completion_tokens
+
+
         # if embeddings request, tokens = input tokens
         elif api_endpoint == "embeddings":
             input = request_json["input"]
@@ -326,12 +498,13 @@ class OpenLLM:
                 num_tokens = len(encoding.encode(input))
                 return num_tokens
             elif isinstance(input, list):  # multiple inputs
-                num_tokens = sum([len(encoding.encode(i)) for i in input])
+                num_tokens = sum(len(encoding.encode(i)) for i in input)
                 return num_tokens
             else:
                 raise TypeError(
                     'Expecting either string or list of strings for "inputs" field in embedding request'
                 )
+
         # more logic needed to support other API calls (e.g., edits, inserts, DALL-E)
         else:
             raise NotImplementedError(
@@ -446,6 +619,8 @@ class APIRequest:
         cache_filepath: str,
         status_tracker: StatusTracker,
         openllm_instance,
+        gen_type: str,
+        api_key: str
     ):
         """Calls the OpenAI API and saves results."""
 
@@ -455,6 +630,64 @@ class APIRequest:
         logging.info(f"Starting request #{self.task_id}")
         error = None
         try:
+            if "localhost" in request_url:  # Ollama-specific handling
+                async with session.post(url=request_url, json=self.request_json) as response:
+                    response_text = await response.text()
+                    response = json.loads(response_text)
+                    if "error" in response:
+                        raise Exception(response["error"])
+                    response = {"response": response["response"]}
+            elif "api.anthropic.com" in request_url:
+                headers = {
+                            "x-api-key": api_key,
+                            "anthropic-version": "2023-06-01",
+                            "content-type": "application/json"
+                                } 
+                if gen_type == "text":
+                    messages = self.request_json['messages']
+                    prompt = "\n\nHuman: " + "\n\nHuman: ".join([msg['content'] for msg in messages if msg['role'] == 'user']) + "\n\nAssistant: " + "\n\nAssistant: ".join([msg['content'] for msg in messages if msg['role'] == 'assistant'])
+                    output_data = {
+                        "model": self.request_json['model'],
+                        "max_tokens_to_sample": 1024,
+                        "prompt": prompt
+                    }                
+                    async with session.post(url=request_url, headers=headers, json=output_data) as response:
+                        response = await response.json()
+                        response = {
+                                "choices": [{
+                                    "message": {
+                                        "content": response.get('completion', ''),
+                                        "id": response.get('id', ''),
+                                        "model": response.get('model', ''),
+                                        "stop_reason": response.get('stop_reason', ''),
+                                        "type": response.get('type', '')
+                                    }
+                                }]
+                            }
+                elif gen_type == "chat":
+                    messages = self.request_json['messages']
+                    prompt = [{"role": "user", "content": "".join([msg['content'] for msg in messages if msg['role'] == 'user'])}]
+                    output_data = {
+                        "model": self.request_json['model'],
+                        "max_tokens": 1024,
+                        "messages" : prompt
+                    }
+                    async with session.post(url=request_url, headers=headers, json=output_data) as response:
+                        raw_response = await response.json()
+                        response = {
+                                    "choices": [{
+                                        "message": {
+                                            "content": raw_response.get('content', [{'text': '', 'type': 'text'}])[0]['text'],
+                                            "role": raw_response.get('role', ''),
+                                            "id": raw_response.get('id', ''),
+                                            "model": raw_response.get('model', ''),
+                                            "stop_reason": raw_response.get('stop_reason', ''),
+                                            "stop_sequence": raw_response.get('stop_sequence', None),
+                                            "type": raw_response.get('type', ''),
+                                            "usage": raw_response.get('usage', {'input_tokens': 0, 'output_tokens': 0})
+                                        }
+                                    }]
+                                }
             async with session.post(
                 url=request_url, headers=request_header, json=self.request_json
             ) as response:
