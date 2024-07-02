@@ -40,7 +40,7 @@ class EvolQuality:
                     }
                 ]
             )
-            evolved_response = generation[0][2]["choices"][0]["message"]["content"]
+            evolved_response = generation[0][-1]["choices"][0]["message"]["content"]
             evolved_responses.append(evolved_response)
             response = evolved_response
 
