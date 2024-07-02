@@ -66,6 +66,19 @@ class OpenLLM:
         else:
             if api_provider == "openai" or "api.openai.com" in base_url:
                 self.model = "gpt-3.5-turbo"
+            elif self.api_provider == "groq" or "api.groq.com" in base_url:
+                self.model = "mixtral-8x7b-32768"
+            elif self.api_provider == "together" or "api.together.xyz" in base_url:
+                self.model = "mistralai/Mixtral-8x7B-Instruct-v0.1"
+            elif (
+                self.api_provider == "anyscale"
+                or "api.endpoints.anyscale.com" in base_url
+            ):
+                self.model = "mistralai/Mistral-7B-Instruct-v0.1"
+            elif self.api_provider == "deepinfra" or "api.deepinfra.com" in base_url:
+                self.model = "meta-llama/Meta-Llama-3-8B-Instruct"
+            elif self.api_provider == "openrouter" or "openrouter.ai" in base_url:
+                self.model = "openai/gpt-3.5-turbo"
             else:
                 raise ValueError("Specify the model you want to use.")
 
@@ -83,6 +96,14 @@ class OpenLLM:
                     raise ValueError("Invalid gen_type provided")
             elif "groq" in self.api_provider:
                 self.base_url = "https://api.groq.com/openai/v1/chat/completions"
+            elif "together" in self.api_provider:
+                self.base_url = "https://api.together.xyz/v1/chat/completions"
+            elif "anyscale" in self.api_provider:
+                self.base_url = "https://api.endpoints.anyscale.com/v1/chat/completions"
+            elif "deepinfra" in self.api_provider:
+                self.base_url = "https://api.deepinfra.com/v1/openai/chat/completions"
+            elif "openrouter" in self.api_provider:
+                self.base_url = "https://openrouter.ai/api/v1/chat/completions"
             else:
                 raise ValueError("Invalid API Provider")
 
@@ -96,6 +117,16 @@ class OpenLLM:
                 return os.getenv("OPENAI_API_KEY")
             elif "api.groq.com" in self.base_url:
                 return os.getenv("GROQ_API_KEY")
+            elif "api.anthropic.com" in self.base_url:
+                return os.getenv("ANTHROPIC_API_KEY")
+            elif "api.together.xyz" in self.base_url:
+                return os.getenv("TOGETHER_API_KEY")
+            elif "api.endpoints.anyscale.com" in self.base_url:
+                return os.getenv("ANYSCALE_API_KEY")
+            elif "api.deepinfra.com" in self.base_url:
+                return os.getenv("DEEPINFRA_API_KEY")
+            elif "openrouter.ai" in self.base_url:
+                return os.getenv("OPENROUTER_API_KEY")
             else:
                 raise ValueError("Invalid API Key Provided")
 
@@ -524,23 +555,23 @@ class APIRequest:
             status_tracker.num_tasks_in_progress -= 1
             status_tracker.num_tasks_succeeded += 1
 
-        # Save the response immediately after processing the request
-        if cache_filepath is not None:
-            data = (
-                [
-                    {openllm_instance.cache_hash: self.task_id},
-                    self.request_json,
-                    response,
-                    self.metadata,
-                ]
-                if self.metadata
-                else [
-                    {openllm_instance.cache_hash: self.task_id},
-                    self.request_json,
-                    response,
-                ]
-            )
-            if data is not None:
-                json_string = json.dumps(data)
-                with open(cache_filepath, "a") as f:
-                    f.write(json_string + "\n")
+            # Save the response immediately after processing the request
+            if cache_filepath is not None:
+                data = (
+                    [
+                        {openllm_instance.cache_hash: self.task_id},
+                        self.request_json,
+                        response,
+                        self.metadata,
+                    ]
+                    if self.metadata
+                    else [
+                        {openllm_instance.cache_hash: self.task_id},
+                        self.request_json,
+                        response,
+                    ]
+                )
+                if data is not None:
+                    json_string = json.dumps(data)
+                    with open(cache_filepath, "a") as f:
+                        f.write(json_string + "\n")
