@@ -22,6 +22,7 @@ from dataformer.utils.cache import (
     get_request_details,
     task_id_generator_function,
 )
+from dataformer.llms.api_providers import model_dict, base_url_dict, api_key_dict
 from dataformer.utils.notebook import in_notebook
 
 if in_notebook():
@@ -63,28 +64,26 @@ class OpenLLM:
 
         if model:
             self.model = model
+        elif self.base_url or self.api_provider:
+            self.base_url = self.base_url or self.get_request_url()
+            self.model = model_dict.get(self.base_url)
         else:
-            if api_provider == "openai" or "api.openai.com" in base_url:
-                self.model = "gpt-3.5-turbo"
-            else:
-                raise ValueError("Specify the model you want to use.")
+            raise ValueError("Model not provided.")
 
     def get_request_url(self):
         if self.base_url:
             return self.base_url
 
-        if self.api_provider:
-            if "openai" in self.api_provider:
-                if self.gen_type == "chat":
-                    self.base_url = "https://api.openai.com/v1/chat/completions"
-                elif self.gen_type == "text":
-                    self.base_url = "https://api.openai.com/v1/completions"
+        if self.api_provider in base_url_dict:
+            if isinstance(base_url_dict[self.api_provider], dict):
+                if self.gen_type in base_url_dict[self.api_provider]:
+                    self.base_url = base_url_dict[self.api_provider][self.gen_type]
                 else:
                     raise ValueError("Invalid gen_type provided")
-            elif "groq" in self.api_provider:
-                self.base_url = "https://api.groq.com/openai/v1/chat/completions"
             else:
-                raise ValueError("Invalid API Provider")
+                self.base_url = base_url_dict[self.api_provider]
+        else:
+            raise ValueError("Invalid API Provider")
 
         return self.base_url
 
@@ -92,14 +91,11 @@ class OpenLLM:
         if self.api_key:
             return self.api_key
         else:
-            if "api.openai.com" in self.base_url:
-                return os.getenv("OPENAI_API_KEY")
-            elif "api.groq.com" in self.base_url:
-                return os.getenv("GROQ_API_KEY")
-            else:
-                raise ValueError("Invalid API Key Provided")
+            for base_url, env_var in api_key_dict.items():
+                if base_url in self.base_url:
+                    return os.getenv(env_var)
 
-        return self.api_key
+        raise ValueError("Invalid API Key Provided")
 
     def get_requesturl_apikey(self):
         request_url = self.get_request_url()
@@ -524,23 +520,23 @@ class APIRequest:
             status_tracker.num_tasks_in_progress -= 1
             status_tracker.num_tasks_succeeded += 1
 
-        # Save the response immediately after processing the request
-        if cache_filepath is not None:
-            data = (
-                [
-                    {openllm_instance.cache_hash: self.task_id},
-                    self.request_json,
-                    response,
-                    self.metadata,
-                ]
-                if self.metadata
-                else [
-                    {openllm_instance.cache_hash: self.task_id},
-                    self.request_json,
-                    response,
-                ]
-            )
-            if data is not None:
-                json_string = json.dumps(data)
-                with open(cache_filepath, "a") as f:
-                    f.write(json_string + "\n")
+            # Save the response immediately after processing the request
+            if cache_filepath is not None:
+                data = (
+                    [
+                        {openllm_instance.cache_hash: self.task_id},
+                        self.request_json,
+                        response,
+                        self.metadata,
+                    ]
+                    if self.metadata
+                    else [
+                        {openllm_instance.cache_hash: self.task_id},
+                        self.request_json,
+                        response,
+                    ]
+                )
+                if data is not None:
+                    json_string = json.dumps(data)
+                    with open(cache_filepath, "a") as f:
+                        f.write(json_string + "\n")

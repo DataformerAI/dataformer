@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 dataset = load_dataset("dataformer/self-knowledge")
-datasetsub = dataset["train"].select(range(50))
+datasetsub = dataset["train"].select(range(5))
 instructions = [example["question"] for example in datasetsub]
 
 
@@ -13,7 +13,17 @@ request_list = [
     {"messages": [{"role": "user", "content": prompt}]} for prompt in instructions
 ]
 
-llm = OpenLLM(model="gpt-3.5-turbo")
+"""
+API Providers
+- openai
+- groq
+- together
+- anyscale
+- deepinfra
+- openrouter
+"""
+
+llm = OpenLLM(api_provider="openrouter")
 response_list = llm.generate(request_list)
 
 for request, response in zip(request_list, response_list):
