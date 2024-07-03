@@ -1,16 +1,21 @@
 # Examples
 
-Setup .env file
+Setup .env file for the provider you want to use.
 ```
-OPENAI_API_KEY=""
-GROQ_API_KEY=""
+OPENAI_API_KEY=
+GROQ_API_KEY=
+TOGETHER_API_KEY= 
+ANYSCALE_API_KEY=
+DEEPINFRA_API_KEY=
+OPENROUTER_API_KEY=
+MONSTER_API_KEY=
 ```
 
 ## Chat
-`python -m examples.chat`
+`python examples/chat.py`
 
 ## Evol Instruct
-`python -m examples.evol_instruct`
+`python examples/evol_instruct.py`
 
 ## Evol Quality
-`python -m examples.evol_quality`
+`python examples/evol_quality.py`
