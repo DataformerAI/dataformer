@@ -2,6 +2,14 @@ import re
 from typing import List, Dict, Any, Union
 from jinja2 import Template
 from dataformer.llms.openllm import OpenLLM
+import sys
+if sys.version_info < (3, 9):
+    import importlib_resources
+else:
+    import importlib.resources as importlib_resources
+
+from typing import TYPE_CHECKING, Any, Dict, List, Union
+
 
 _PARSE_SCORE_LINE_REGEX = re.compile(r"\[\d+\] Score: (\d+)", re.IGNORECASE)
 
@@ -12,9 +20,13 @@ class ComplexityScorer:
 
     def _load_template(self) -> Template:
         # Load the Jinja2 template
-        template_path = r"dataformer\components\templates\complexity-scorer.jinja2"
-
-        return Template(open(template_path).read())
+        _path = str(
+            importlib_resources.files("dataformer")
+            / "components"
+            / "templates"
+            / "complexity-scorer.jinja2"
+        )
+        return Template(open(_path).read())
 
     def _parse_scores(self, output: Union[str, None], input: Dict[str, Any]) -> List[float]:
         if output is None:
