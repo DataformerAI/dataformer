@@ -14,10 +14,9 @@ else:
     import importlib.resources as importlib_resources
 
 
-
 _PARSE_SCORE_LINE_REGEX = re.compile(r"\[\d+\] Score: (\d+)", re.IGNORECASE)
 
-class ComplexityScorer:
+class QualityScorer:
     def __init__(self, llm: OpenLLM):
         self.llm = llm
         self.template = self._load_template()
@@ -30,20 +29,20 @@ class ComplexityScorer:
             importlib_resources.files("dataformer")
             / "components"
             / "templates"
-            / "complexity-scorer.jinja2"
+            / "quality-scorer.jinja2"
         )
         return Template(open(_path).read())
 
     def _parse_scores(self, output: Union[str, None], input: Dict[str, Any]) -> List[float]:
         if output is None:
-            return {"scores": [None] * len(input["instructions"])}
+            return {"scores": [None] * len(input["responses"])}
         scores = []
         score_lines = output.split("\n")
         for i, line in enumerate(score_lines):
             match = _PARSE_SCORE_LINE_REGEX.match(line)
             score = float(match.group(1)) if match else None
             scores.append(score)
-            if i == len(input["instructions"]) - 1:
+            if i == len(input["responses"]) - 1:
                 break
         return scores
 
@@ -69,13 +68,13 @@ class ComplexityScorer:
         self.results = []
         requests = []
         for input in inputs:
-            prompt = self.template.render(instructions=input['instructions'])
+            prompt = self.template.render(responses=input['responses'],instruction=input['instruction'])
             requests.append({
                             "model": self.llm.model,
                             "messages": [{"role": "user", "content": prompt}],
                         })
             result = {
-                "instructions": input['instructions'],
+                "instruction": input['instruction'],
             }
             self.results.append(result)
 
@@ -83,8 +82,9 @@ class ComplexityScorer:
                                       use_cache=self.use_cache,
                                       cache_vars=self.cache_vars,
                                       task_id_generator=self.task_id_generator)
+        
         for response, input, result  in zip(responses, inputs, self.results):
             result['scores'] = self._parse_scores(response[-1]['choices'][0]['message']['content'], input)
             result["raw output"] = response[-1]['choices'][0]['message']['content']
-
+        
         return self.results
