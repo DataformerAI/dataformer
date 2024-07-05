@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rich import traceback as rich_traceback
+# from rich import traceback as rich_traceback
 
-__version__ = "0.0.1"
+# __version__ = "0.0.1"
 
-rich_traceback.install(show_locals=True)
+# rich_traceback.install(show_locals=True)
