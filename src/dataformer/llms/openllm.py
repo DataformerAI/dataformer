@@ -386,8 +386,7 @@ class OpenLLM:
                 self.skip_task_ids = cached_indices
 
         for request in request_list:
-            if "model" not in request:
-                request["model"] = self.model
+            request["model"] = self.model
 
         asyncio.run(
             self.process_api_requests(
