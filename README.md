@@ -12,7 +12,10 @@
     <img src="https://img.shields.io/badge/linkedin-blue?logo=linkedin"/>
   </a>
   <a href="https://dataformer.ai/discord">
-  <img src="https://img.shields.io/badge/Discord-7289DA?&logo=discord&logoColor=white"/>
+    <img src="https://img.shields.io/badge/Discord-7289DA?&logo=discord&logoColor=white"/>
+  </a>
+  <a href="https://dataformer.ai/call">
+    <img src="https://img.shields.io/badge/book_a_call-00897B?&logo=googlemeet&logoColor=white"/>
   </a>
 </p>
 
