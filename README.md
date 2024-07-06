@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://github.com/DataformerAI/dataformer/assets/39311993/033d224f-38a0-455b-8b1f-d86b399fb3f2"/>
+  <img src="https://github.com/DataformerAI/dataformer/assets/39311993/b2515523-19a9-4a54-8f12-1f8de24b7a9f"/>
 </div>
 
 <h3 align="center">Solving data for LLMs - Create, Curate & Clean.!</h3>
