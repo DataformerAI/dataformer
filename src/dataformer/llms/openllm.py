@@ -60,7 +60,7 @@ class OpenLLM:
         self.task_id_generator = None
 
         # initialize logging
-        logging.basicConfig(level=self.logging_level)
+        logging.basicConfig(level=self.logging_level, force=True)
 
         if model:
             self.model = model
