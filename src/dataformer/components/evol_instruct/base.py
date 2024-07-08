@@ -2,7 +2,7 @@ import random
 from typing import Any, Dict, List
 
 from dataformer.components.evol_instruct.prompts import MUTATION_TEMPLATES
-from dataformer.llms.openllm import OpenLLM
+from dataformer.llms import OpenLLM
 from dataformer.utils.cache import (
     get_cache_vars,
     get_request_details,
