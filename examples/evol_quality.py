@@ -29,7 +29,7 @@ request_list = [
     {"messages": [{"role": "user", "content": prompt}]} for prompt in instructions
 ]
 answers = llm.generate(request_list, use_cache=True)
-answers = [answer[-1]["choices"][0]["message"]["content"] for answer in answers]
+answers = [answer[1]["choices"][0]["message"]["content"] for answer in answers]
 
 # Formatting in required format for EvolQuality
 inputs = [

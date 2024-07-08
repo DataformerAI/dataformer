@@ -49,7 +49,7 @@ class EvolInstruct:
                 cache_vars=self.cache_vars,
                 task_id_generator=self.task_id_generator,
             )
-            evolved_instruction = response[0][-1]["choices"][0]["message"]["content"]
+            evolved_instruction = response[0][1]["choices"][0]["message"]["content"]
             evolved_instructions.append(evolved_instruction)
             instruction = evolved_instruction
 
@@ -113,7 +113,7 @@ class EvolInstruct:
                 num_answers = self.num_evolutions
             for result in self.results:
                 result["answers"] = [
-                    answers[i][-1]["choices"][0]["message"]["content"]
+                    answers[i][1]["choices"][0]["message"]["content"]
                     for i in range(answer_index, answer_index + num_answers)
                 ]
                 answer_index += num_answers

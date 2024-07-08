@@ -23,10 +23,10 @@ API Providers
 - openrouter
 """
 
-llm = OpenLLM(api_provider="openrouter")
+llm = OpenLLM(api_provider="groq")
 response_list = llm.generate(request_list)
 
 for request, response in zip(request_list, response_list):
     prompt = request["messages"][0]["content"]
-    answer = response[-1]["choices"][0]["message"]["content"]
+    answer = response[1]["choices"][0]["message"]["content"]
     print(f"Prompt: {prompt}\nAnswer: {answer}\n")
