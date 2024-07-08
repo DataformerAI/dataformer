@@ -361,6 +361,9 @@ class OpenLLM:
                 "task_id_generator",
                 "response_list",
                 "use_cache",
+                "max_requests_per_minute",
+                "max_tokens_per_minute",
+                "max_attempts"
             ],
             additional_data=cache_vars,
         )
