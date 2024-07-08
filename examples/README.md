@@ -11,6 +11,13 @@ OPENROUTER_API_KEY=
 MONSTER_API_KEY=
 ```
 
+Also, set max rate limits available for you by your api provider in .env file.    
+Default values are 20 RPM & 10K TPM.    
+```
+MAX_REQUESTS_PER_MINUTE=
+MAX_TOKENS_PER_MINUTE=
+```
+
 ## Chat
 `python examples/chat.py`
 

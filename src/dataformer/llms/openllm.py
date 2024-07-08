@@ -38,8 +38,8 @@ class OpenLLM:
         base_url="",
         api_provider="openai",
         model="",
-        max_requests_per_minute=20.0,
-        max_tokens_per_minute=5000.0,
+        max_requests_per_minute=None,
+        max_tokens_per_minute=None,
         max_attempts=5,
         token_encoding_name="cl100k_base",
         logging_level=logging.INFO,
@@ -49,8 +49,8 @@ class OpenLLM:
         self.api_key = api_key
         self.base_url = base_url
         self.api_provider = api_provider
-        self.max_requests_per_minute = max_requests_per_minute
-        self.max_tokens_per_minute = max_tokens_per_minute
+        self.max_requests_per_minute = max_requests_per_minute or os.getenv('MAX_REQUESTS_PER_MINUTE', 20)
+        self.max_tokens_per_minute = max_tokens_per_minute or os.getenv('MAX_TOKENS_PER_MINUTE', 10000)
         self.max_attempts = max_attempts
         self.token_encoding_name = token_encoding_name
         self.logging_level = logging_level
