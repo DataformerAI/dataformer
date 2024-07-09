@@ -1,5 +1,5 @@
 from dataformer.components import QualityScorer
-from dataformer.llms.openllm import OpenLLM
+from dataformer.llms import OpenLLM
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -11,8 +11,8 @@ input = [{"instruction": "What are the key features of Python programming langua
                         ]}]
 
 llm = OpenLLM(
-    model="mixtral-8x7b-32768", api_provider="groq"
-)  # Make sure you have set "GROQ_API_KEY" in .env file.
+    model="gpt-4o", api_provider="openai"
+)
 
 scorer = QualityScorer(
     llm=llm

@@ -1,5 +1,5 @@
 from dataformer.components import ComplexityScorer
-from dataformer.llms.openllm import OpenLLM
+from dataformer.llms import OpenLLM
 from dotenv import load_dotenv
 
 load_dotenv()

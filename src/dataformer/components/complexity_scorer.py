@@ -1,7 +1,7 @@
 import re
 from typing import List, Dict, Any, Union
 from jinja2 import Template
-from dataformer.llms.openllm import OpenLLM
+from dataformer.llms import OpenLLM
 from dataformer.utils.cache import (
     get_cache_vars,
     get_request_details,
@@ -84,7 +84,7 @@ class ComplexityScorer:
                                       cache_vars=self.cache_vars,
                                       task_id_generator=self.task_id_generator)
         for response, input, result  in zip(responses, inputs, self.results):
-            result['scores'] = self._parse_scores(response[-1]['choices'][0]['message']['content'], input)
-            result["raw output"] = response[-1]['choices'][0]['message']['content']
+            result['scores'] = self._parse_scores(response[1]['choices'][0]['message']['content'], input)
+            result["raw output"] = response[1]['choices'][0]['message']['content']
 
         return self.results
