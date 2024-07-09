@@ -1,14 +1,14 @@
 from dataformer.components import Deita
 
 deita = Deita(
-    max_rows=2,
-    diversity_threshold=0.9,
+    max_rows=2, # number of rows desired after filtering
+    diversity_threshold=0.9, # minimum cosine distance with respect to it's nearest neighbor, default value = 0.7
 )
 
 inputs = [
             {
-                "evol_instruction_score": 0.3,
-                "evol_response_score": 0.2,
+                "evol_instruction_score": 0.3, # instruction score from complexity scorer
+                "evol_response_score": 0.2, # response score from quality scorer
                 "embedding": [-9.12727541, -4.24642847, -9.34933029],
             },
             {
