@@ -88,6 +88,8 @@ class OpenLLM:
         return self.base_url
 
     def get_api_key(self):
+        if self.api_provider == "ollama":
+            return None
         if self.api_key:
             return self.api_key
         else:
@@ -121,6 +123,8 @@ class OpenLLM:
         # use api-key header for Azure deployments
         if "/deployments" in request_url:
             request_header = {"api-key": f"{api_key}"}
+        if "11434" in request_url:
+            request_header = {"Content-Type": "application/json"}
 
         # initialize trackers
         queue_of_requests_to_retry = asyncio.Queue()
@@ -328,6 +332,8 @@ class OpenLLM:
                 raise TypeError(
                     'Expecting either string or list of strings for "inputs" field in embedding request'
                 )
+        elif "11434" in api_endpoint:
+            return 0 # Need to implement output response token extraction
         # more logic needed to support other API calls (e.g., edits, inserts, DALL-E)
         else:
             raise NotImplementedError(
@@ -341,6 +347,13 @@ class OpenLLM:
         task_id_generator=None,
         use_cache=True,
     ):
+        # Ensure request_list is a list of dictionaries
+        if not isinstance(request_list, list):
+            raise ValueError("request_list must be a list")
+        for request in request_list:
+            if not isinstance(request, dict):
+                raise ValueError("Each request in request_list must be a dictionary")
+
         # Set base_url before any caching
         request_url, api_key = self.get_requesturl_apikey()
 
@@ -367,7 +380,7 @@ class OpenLLM:
             ],
             additional_data=cache_vars,
         )
-        # We create cache_hash to sort the async respones even when use_cache is False.
+        # We create cache_hash to sort the async responses even when use_cache is False.
         self.cache_hash = create_hash(cache_vars)
 
         self.skip_task_ids = []
