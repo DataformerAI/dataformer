@@ -4,4 +4,4 @@ templates = {
     "phi3:medium": "<s><|user|>",
 }
 
-languages = {"en": "", "es": "spanish"}
+languages = {"en": "", "hi": "hindi"}
