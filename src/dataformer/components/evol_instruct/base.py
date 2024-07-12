@@ -49,7 +49,7 @@ class EvolInstruct:
                 cache_vars=self.cache_vars,
                 task_id_generator=self.task_id_generator,
             )
-            evolved_instruction = response[-1][1]["choices"][0]["message"]["content"] # Response is list of all respones (including prev inputs). For latest we use -1.
+            evolved_instruction = response[-1][1]["choices"][0]["message"]["content"] # Response is list of all responses (including prev inputs). For latest we use -1.
             evolved_instructions.append(evolved_instruction)
             instruction = evolved_instruction
 

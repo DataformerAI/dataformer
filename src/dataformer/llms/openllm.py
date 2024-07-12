@@ -367,7 +367,7 @@ class OpenLLM:
             ],
             additional_data=cache_vars,
         )
-        # We create cache_hash to sort the async respones even when use_cache is False.
+        # We create cache_hash to sort the async responses even when use_cache is False.
         self.cache_hash = create_hash(cache_vars)
 
         self.skip_task_ids = []
