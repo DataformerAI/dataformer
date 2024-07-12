@@ -48,7 +48,7 @@ class EvolQuality:
                 cache_vars=self.cache_vars,
                 task_id_generator=self.task_id_generator,
             )
-            evolved_response = generation[0][1]["choices"][0]["message"]["content"]
+            evolved_response = generation[-1][1]["choices"][0]["message"]["content"] # Response is list of all respones (including prev inputs). For latest we use -1.
             evolved_responses.append(evolved_response)
             response = evolved_response
 
