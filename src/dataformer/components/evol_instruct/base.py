@@ -53,7 +53,8 @@ class EvolInstruct:
             evolved_instruction = response[self.active_id][1]["choices"][0]["message"]["content"]
             evolved_instructions.append(evolved_instruction)
             instruction = evolved_instruction
-            self.active_id += 1
+            if self.use_cache:
+                self.active_id += 1
 
         if not self.store_evolutions:
             return [evolved_instructions[-1]]

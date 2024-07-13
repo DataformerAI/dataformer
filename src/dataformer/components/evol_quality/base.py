@@ -52,7 +52,8 @@ class EvolQuality:
             evolved_response = generation[self.active_id][1]["choices"][0]["message"]["content"] # Response is list of all responses (including prev inputs).
             evolved_responses.append(evolved_response)
             response = evolved_response
-            self.active_id += 1
+            if self.use_cache:
+                self.active_id += 1
 
         if not self.store_evolutions:
             return [evolved_responses[-1]]
