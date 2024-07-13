@@ -64,6 +64,7 @@ class EvolQuality:
         """Generates evolved responses for a list of inputs containing instructions and responses."""
 
         self.use_cache = use_cache
+        self.active_id = 0
 
         self.task_id_generator = task_id_generator_function()
 

@@ -64,6 +64,7 @@ class EvolInstruct:
         """Generates evolved instructions for a list of instructions."""
 
         self.use_cache = use_cache
+        self.active_id = 0
 
         self.task_id_generator = task_id_generator_function()
 
