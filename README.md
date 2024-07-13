@@ -2,7 +2,7 @@
   <img src="https://github.com/DataformerAI/dataformer/assets/39311993/b2515523-19a9-4a54-8f12-1f8de24b7a9f"/>
 </div>
 
-<h3 align="center">Solving data for LLMs - Create, Curate & Clean.!</h3>
+<h3 align="center">Solving data for LLMs - Create quality synthetic datasets!</h3>
 
 <p align="center">
   <a href="https://x.com/dataformer_ai">
