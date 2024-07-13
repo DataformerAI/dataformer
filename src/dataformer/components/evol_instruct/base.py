@@ -103,23 +103,24 @@ class EvolInstruct:
                 )
             self.results.append(result)
 
-        self.request_details = get_request_details(
-            [
-                {
-                    "model": self.llm.model,
-                    "messages": [{"role": "user", "content": str(instruction)}],
-                }
-                for instruction in all_messages
-            ]
-        )
-
-        self.cache_vars = get_cache_vars(
-            self,
-            ignore_keys=["results", "task_id_generator", "cache_vars", "use_cache", "active_id"],
-        )
-
         # Perform a single batch request for all messages
         if self.generate_answers:
+
+            self.request_details = get_request_details(
+                [
+                    {
+                        "model": self.llm.model,
+                        "messages": [{"role": "user", "content": str(instruction)}],
+                    }
+                    for instruction in all_messages
+                ]
+            )
+
+            self.cache_vars = get_cache_vars(
+                self,
+                ignore_keys=["results", "task_id_generator", "cache_vars", "use_cache", "active_id"],
+            )
+
             answers = self.llm.generate(
                 all_messages, use_cache=self.use_cache, cache_vars=self.cache_vars
             )
