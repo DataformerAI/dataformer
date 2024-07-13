@@ -25,6 +25,7 @@ class EvolQuality:
         self.include_original_response = include_original_response
         self.mutation_templates = mutation_templates
         self.use_cache = True
+        self.active_id = 0
 
     def evolve_responses(self, instruction: str, response: str) -> List[str]:
         """Evolves a response based on the mutation templates."""
@@ -48,9 +49,10 @@ class EvolQuality:
                 cache_vars=self.cache_vars,
                 task_id_generator=self.task_id_generator,
             )
-            evolved_response = generation[-1][1]["choices"][0]["message"]["content"] # Response is list of all responses (including prev inputs). For latest we use -1.
+            evolved_response = generation[self.active_id][1]["choices"][0]["message"]["content"] # Response is list of all responses (including prev inputs).
             evolved_responses.append(evolved_response)
             response = evolved_response
+            self.active_id += 1
 
         if not self.store_evolutions:
             return [evolved_responses[-1]]
@@ -77,7 +79,7 @@ class EvolQuality:
         # Get cache_vars after initalizing all important variables
         self.cache_vars = get_cache_vars(
             self,
-            ignore_keys=["results", "task_id_generator", "cache_vars", "use_cache"],
+            ignore_keys=["results", "task_id_generator", "cache_vars", "use_cache", "active_id"],
         )
 
         self.results = []

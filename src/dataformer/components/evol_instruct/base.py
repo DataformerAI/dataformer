@@ -27,6 +27,7 @@ class EvolInstruct:
         self.include_original_instruction = include_original_instruction
         self.mutation_templates = mutation_templates
         self.use_cache = True
+        self.active_id = 0
 
     def evolve_instruction(self, instruction: str) -> List[str]:
         """Evolves an instruction based on the mutation templates."""
@@ -49,9 +50,10 @@ class EvolInstruct:
                 cache_vars=self.cache_vars,
                 task_id_generator=self.task_id_generator,
             )
-            evolved_instruction = response[-1][1]["choices"][0]["message"]["content"] # Response is list of all responses (including prev inputs). For latest we use -1.
+            evolved_instruction = response[self.active_id][1]["choices"][0]["message"]["content"]
             evolved_instructions.append(evolved_instruction)
             instruction = evolved_instruction
+            self.active_id += 1
 
         if not self.store_evolutions:
             return [evolved_instructions[-1]]
@@ -77,7 +79,7 @@ class EvolInstruct:
         # Get cache_vars after initalizing all important variables
         self.cache_vars = get_cache_vars(
             self,
-            ignore_keys=["results", "task_id_generator", "cache_vars", "use_cache"],
+            ignore_keys=["results", "task_id_generator", "cache_vars", "use_cache", "active_id"],
         )
 
         self.results = []
@@ -100,6 +102,21 @@ class EvolInstruct:
                     ]
                 )
             self.results.append(result)
+
+        self.request_details = get_request_details(
+            [
+                {
+                    "model": self.llm.model,
+                    "messages": [{"role": "user", "content": str(instruction)}],
+                }
+                for instruction in all_messages
+            ]
+        )
+
+        self.cache_vars = get_cache_vars(
+            self,
+            ignore_keys=["results", "task_id_generator", "cache_vars", "use_cache", "active_id"],
+        )
 
         # Perform a single batch request for all messages
         if self.generate_answers:
