@@ -173,6 +173,7 @@ class OpenLLM:
         max_requests_per_minute=None,
         max_tokens_per_minute=None,
         max_concurrent_requests=None,
+        max_rps=False,
         max_attempts=5,
         token_encoding_name="cl100k_base",
         logging_level=logging.INFO,
@@ -185,6 +186,7 @@ class OpenLLM:
         self.max_requests_per_minute = max_requests_per_minute or os.getenv('MAX_REQUESTS_PER_MINUTE', 20)
         self.max_tokens_per_minute = max_tokens_per_minute or os.getenv('MAX_TOKENS_PER_MINUTE', 10000)
         self.max_concurrent_requests = max_concurrent_requests or os.getenv('MAX_TOKENS_PER_MINUTE')
+        self.max_rps = max_rps
         self.max_attempts = max_attempts
         self.token_encoding_name = token_encoding_name
         self.logging_level = logging_level
@@ -268,7 +270,7 @@ class OpenLLM:
         next_request = None  # variable to hold the next request to call
 
         # initialize available capacity counts
-        available_request_capacity = self.max_requests_per_minute
+        available_request_capacity = self.max_requests_per_minute / 60 if self.max_rps else self.max_requests_per_minute 
         available_token_capacity = self.max_tokens_per_minute
         last_update_time = time.time()
 
@@ -322,11 +324,19 @@ class OpenLLM:
                 # update available capacity
                 current_time = time.time()
                 seconds_since_update = current_time - last_update_time
-                available_request_capacity = min(
-                    available_request_capacity
-                    + self.max_requests_per_minute * seconds_since_update / 60.0,
-                    self.max_requests_per_minute,
-                )
+                if self.max_rps:
+                    # If max_rps is True, divide max_requests_per_minute by 60
+                    available_request_capacity = min(
+                        available_request_capacity
+                        + (self.max_requests_per_minute / 60) * seconds_since_update,
+                        self.max_requests_per_minute / 60,
+                    )
+                else:
+                    available_request_capacity = min(
+                        available_request_capacity
+                        + self.max_requests_per_minute * seconds_since_update / 60.0,
+                        self.max_requests_per_minute,
+                    )
                 available_token_capacity = min(
                     available_token_capacity
                     + self.max_tokens_per_minute * seconds_since_update / 60.0,
