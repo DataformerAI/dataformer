@@ -44,7 +44,7 @@ class OpenLLM:
         token_encoding_name="cl100k_base",
         logging_level=logging.INFO,
         gen_type="chat",
-        cache_dir=".cache",
+        cache_dir=".cache/dataformer",
     ):
         self.api_key = api_key
         self.base_url = base_url
