@@ -534,7 +534,8 @@ class OpenLLM:
                 "use_cache",
                 "max_requests_per_minute",
                 "max_tokens_per_minute",
-                "max_attempts"
+                "max_attempts",
+                "max_concurrent_requests"
             ],
             additional_data=cache_vars,
         )
