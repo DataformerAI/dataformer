@@ -549,7 +549,8 @@ class OpenLLM:
                 "max_tokens_per_minute",
                 "max_attempts",
                 "max_concurrent_requests",
-                "max_rps"
+                "max_rps",
+                "api_key"
         ]
 
         # Check if 'model' is present in all request items
