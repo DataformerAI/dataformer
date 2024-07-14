@@ -1,7 +1,7 @@
 import re
 from typing import List, Dict, Any, Union
 from jinja2 import Template
-from dataformer.llms import OpenLLM
+from dataformer.llms import AsyncLLM
 from dataformer.utils.cache import (
     get_cache_vars,
     get_request_details,
@@ -17,7 +17,7 @@ else:
 _PARSE_SCORE_LINE_REGEX = re.compile(r"\[\d+\] Score: (\d+)", re.IGNORECASE)
 
 class QualityScorer:
-    def __init__(self, llm: OpenLLM):
+    def __init__(self, llm: AsyncLLM):
         self.llm = llm
         self.template = self._load_template()
         self.use_cache = True

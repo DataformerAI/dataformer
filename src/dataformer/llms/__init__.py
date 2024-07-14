@@ -1,3 +1,3 @@
-from dataformer.llms.openllm import OpenLLM
+from dataformer.llms.asyncllm import AsyncLLM
 
-__all__ = [OpenLLM]
+__all__ = [AsyncLLM]

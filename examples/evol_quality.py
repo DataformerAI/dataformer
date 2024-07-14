@@ -1,5 +1,5 @@
 from dataformer.components.evol_quality import EvolQuality
-from dataformer.llms import OpenLLM
+from dataformer.llms import AsyncLLM
 from datasets import load_dataset
 from dotenv import load_dotenv
 
@@ -20,7 +20,7 @@ COLOR = {
     "ENDC": "\033[0m",
 }
 
-llm = OpenLLM(
+llm = AsyncLLM(
     model="mixtral-8x7b-32768", api_provider="groq"
 )  # Make sure you have set "GROQ_API_KEY" in .env file.
 

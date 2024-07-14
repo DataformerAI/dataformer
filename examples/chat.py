@@ -1,4 +1,4 @@
-from dataformer.llms import OpenLLM
+from dataformer.llms import AsyncLLM
 from datasets import load_dataset
 from dotenv import load_dotenv
 
@@ -23,7 +23,7 @@ API Providers
 - openrouter
 """
 
-llm = OpenLLM(api_provider="groq")
+llm = AsyncLLM(api_provider="groq")
 response_list = llm.generate(request_list)
 
 for request, response in zip(request_list, response_list):

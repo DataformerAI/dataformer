@@ -62,11 +62,11 @@ class APIRequest:
         retry_queue: asyncio.Queue,
         cache_filepath: str,
         status_tracker: StatusTracker,
-        openllm_instance,
+        asyncllm_instance,
     ):
         """Calls the OpenAI API and saves results."""
 
-        if self.task_id in openllm_instance.skip_task_ids:
+        if self.task_id in asyncllm_instance.skip_task_ids:
             return  # Skip request
 
         logging.info(f"Starting request #{self.task_id}")
@@ -105,39 +105,39 @@ class APIRequest:
                 )
                 data = (
                     [
-                        {openllm_instance.cache_hash: self.task_id},
+                        {asyncllm_instance.cache_hash: self.task_id},
                         self.request_json,
                         [str(e) for e in self.result],
                         self.metadata,
                     ]
                     if self.metadata
                     else [
-                        {openllm_instance.cache_hash: self.task_id},
+                        {asyncllm_instance.cache_hash: self.task_id},
                         self.request_json,
                         [str(e) for e in self.result],
                     ]
                 )
                 if data is not None:
-                    openllm_instance.response_list.append(data)
+                    asyncllm_instance.response_list.append(data)
                 status_tracker.num_tasks_in_progress -= 1
                 status_tracker.num_tasks_failed += 1
         else:
             data = (
                 [
-                    {openllm_instance.cache_hash: self.task_id},
+                    {asyncllm_instance.cache_hash: self.task_id},
                     self.request_json,
                     response,
                     self.metadata,
                 ]
                 if self.metadata
                 else [
-                    {openllm_instance.cache_hash: self.task_id},
+                    {asyncllm_instance.cache_hash: self.task_id},
                     self.request_json,
                     response,
                 ]
             )
             if data is not None:
-                openllm_instance.response_list.append(data)
+                asyncllm_instance.response_list.append(data)
             status_tracker.num_tasks_in_progress -= 1
             status_tracker.num_tasks_succeeded += 1
 
@@ -145,14 +145,14 @@ class APIRequest:
             if cache_filepath is not None:
                 data = (
                     [
-                        {openllm_instance.cache_hash: self.task_id},
+                        {asyncllm_instance.cache_hash: self.task_id},
                         self.request_json,
                         response,
                         self.metadata,
                     ]
                     if self.metadata
                     else [
-                        {openllm_instance.cache_hash: self.task_id},
+                        {asyncllm_instance.cache_hash: self.task_id},
                         self.request_json,
                         response,
                     ]
@@ -163,7 +163,7 @@ class APIRequest:
                         f.write(json_string + "\n")
 
 
-class OpenLLM:
+class AsyncLLM:
     def __init__(
         self,
         api_key=None,
@@ -392,7 +392,7 @@ class OpenLLM:
                                     retry_queue=queue_of_requests_to_retry,
                                     cache_filepath=cache_filepath,
                                     status_tracker=status_tracker,
-                                    openllm_instance=self,
+                                    asyncllm_instance=self,
                                 )
                             )
                         next_request = None  # reset next_request to empty
@@ -526,7 +526,7 @@ class OpenLLM:
                 retry_queue=retry_queue,
                 cache_filepath=cache_filepath,
                 status_tracker=status_tracker,
-                openllm_instance=self,
+                asyncllm_instance=self,
             )
 
     def generate(

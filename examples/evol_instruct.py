@@ -1,5 +1,5 @@
 from dataformer.components.evol_instruct import EvolInstruct
-from dataformer.llms import OpenLLM
+from dataformer.llms import AsyncLLM
 from datasets import load_dataset
 from dotenv import load_dotenv
 
@@ -9,7 +9,7 @@ dataset = load_dataset("dataformer/self-knowledge")
 datasetsub = dataset["train"].select(range(2))
 instructions = [example["question"] for example in datasetsub]
 
-llm = OpenLLM(
+llm = AsyncLLM(
     model="mixtral-8x7b-32768", api_provider="groq"
 )  # Make sure you have set "GROQ_API_KEY" in .env file.
 

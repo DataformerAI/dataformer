@@ -2,7 +2,7 @@ import random
 from typing import Any, Dict, List
 
 from dataformer.components.evol_instruct.prompts import MUTATION_TEMPLATES
-from dataformer.llms import OpenLLM
+from dataformer.llms import AsyncLLM
 from dataformer.utils.cache import (
     get_cache_vars,
     get_request_details,
@@ -13,7 +13,7 @@ from dataformer.utils.cache import (
 class EvolInstruct:
     def __init__(
         self,
-        llm: OpenLLM,
+        llm: AsyncLLM,
         num_evolutions: int = 1,
         store_evolutions: bool = False,
         generate_answers: bool = False,

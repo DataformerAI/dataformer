@@ -1,5 +1,5 @@
 from dataformer.components import QualityScorer
-from dataformer.llms import OpenLLM
+from dataformer.llms import AsyncLLM
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -10,7 +10,7 @@ input = [{"instruction": "What are the key features of Python programming langua
                         "Python is a popular programming language with easy syntax and extensive libraries. It is used for tasks like scripting, web development, and scientific computing. Its dynamic typing can be both a strength and a weakness depending on the context."
                         ]}]
 
-llm = OpenLLM(
+llm = AsyncLLM(
     model="gpt-4o", api_provider="openai"
 )
 
