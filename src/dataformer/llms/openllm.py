@@ -184,7 +184,7 @@ class OpenLLM:
         self.base_url = base_url
         self.api_provider = api_provider
         self.max_requests_per_minute = max_requests_per_minute or os.getenv('MAX_REQUESTS_PER_MINUTE', 20)
-        self.max_tokens_per_minute = max_tokens_per_minute or os.getenv('MAX_TOKENS_PER_MINUTE', 10000)
+        self.max_tokens_per_minute = max_tokens_per_minute or os.getenv('MAX_TOKENS_PER_MINUTE', 10000000000)
         self.max_concurrent_requests = max_concurrent_requests or os.getenv('MAX_TOKENS_PER_MINUTE')
         self.max_rps = max_rps
         self.max_attempts = max_attempts
@@ -205,9 +205,23 @@ class OpenLLM:
             self.model = model_dict.get(self.base_url)
         else:
             raise ValueError("Model not provided.")
+        
+        if self.api_provider == "together":
+            self.max_rps = True
 
     def get_request_url(self):
         if self.base_url:
+            
+            if not self.api_provider:
+                # If api_provider is not set, get it from base_url_dict
+                for provider, urls in base_url_dict.items():
+                    if self.base_url in urls.values():
+                        self.api_provider = provider
+                        break
+            
+            if self.api_provider == "together":
+                self.max_rps = True
+
             return self.base_url
 
         if self.api_provider in base_url_dict:
@@ -525,6 +539,28 @@ class OpenLLM:
         # Set base_url before any caching
         request_url, api_key = self.get_requesturl_apikey()
 
+        ignore_keys = [
+                "cache_hash",
+                "skip_task_ids",
+                "task_id_generator",
+                "response_list",
+                "use_cache",
+                "max_requests_per_minute",
+                "max_tokens_per_minute",
+                "max_attempts",
+                "max_concurrent_requests",
+                "max_rps"
+        ]
+
+        # Check if 'model' is present in all request items
+        if all('model' in request for request in request_list):
+            # Since all request already have model, we can ignore self.model for cache.
+            ignore_keys.append('model')
+        else:
+            for request in request_list:
+                if 'model' not in request:
+                    request["model"] = self.model
+
         if task_id_generator:
             self.task_id_generator = task_id_generator
 
@@ -536,18 +572,7 @@ class OpenLLM:
 
         cache_vars = get_cache_vars(
             self,
-            ignore_keys=[
-                "cache_hash",
-                "skip_task_ids",
-                "task_id_generator",
-                "response_list",
-                "use_cache",
-                "max_requests_per_minute",
-                "max_tokens_per_minute",
-                "max_attempts",
-                "max_concurrent_requests",
-                "max_rps"
-            ],
+            ignore_keys=ignore_keys,
             additional_data=cache_vars,
         )
         # We create cache_hash to sort the async responses even when use_cache is False.
@@ -570,9 +595,6 @@ class OpenLLM:
                     if self.cache_hash in response_json[0].keys():
                         cached_indices.append(response_json[0][self.cache_hash])
                 self.skip_task_ids = cached_indices
-
-        for request in request_list:
-            request["model"] = self.model
 
         asyncio.run(
             self.process_api_requests(
