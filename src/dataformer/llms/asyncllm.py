@@ -16,19 +16,20 @@ from dataclasses import (
 import aiohttp  # for making API calls concurrently
 import tiktoken  # for counting tokens
 
+from dataformer.llms.api_providers import api_key_dict, base_url_dict, model_dict
 from dataformer.utils.cache import (
     create_hash,
     get_cache_vars,
     get_request_details,
     task_id_generator_function,
 )
-from dataformer.llms.api_providers import model_dict, base_url_dict, api_key_dict
 from dataformer.utils.notebook import in_notebook
 
 if in_notebook():
     import nest_asyncio
 
     nest_asyncio.apply()
+
 
 @dataclass
 class StatusTracker:
@@ -42,6 +43,7 @@ class StatusTracker:
     num_api_errors: int = 0  # excluding rate limit errors, counted above
     num_other_errors: int = 0
     time_of_last_rate_limit_error: int = 0  # used to cool off after hitting rate limits
+
 
 @dataclass
 class APIRequest:
@@ -89,12 +91,11 @@ class APIRequest:
                         1  # rate limit errors are counted separately
                     )
 
-        except (
-            Exception
-        ) as e:  # catching naked exceptions is bad practice, but in this case we'll log & save them
+        except Exception as e:  # catching naked exceptions is bad practice, but in this case we'll log & save them
             logging.warning(f"Request {self.task_id} failed with Exception {e}")
             status_tracker.num_other_errors += 1
             error = e
+
         if error:
             self.result.append(error)
             if self.attempts_left:
@@ -103,64 +104,56 @@ class APIRequest:
                 logging.error(
                     f"Request {self.request_json} failed after all attempts. Saving errors: {self.result}"
                 )
-                data = (
-                    [
-                        {asyncllm_instance.cache_hash: self.task_id},
-                        self.request_json,
-                        [str(e) for e in self.result],
-                        self.metadata,
-                    ]
-                    if self.metadata
-                    else [
-                        {asyncllm_instance.cache_hash: self.task_id},
-                        self.request_json,
-                        [str(e) for e in self.result],
-                    ]
-                )
+                response = [str(e) for e in self.result]
+                data = self.create_data(asyncllm_instance, response)
                 if data is not None:
                     asyncllm_instance.response_list.append(data)
                 status_tracker.num_tasks_in_progress -= 1
                 status_tracker.num_tasks_failed += 1
         else:
-            data = (
-                [
-                    {asyncllm_instance.cache_hash: self.task_id},
-                    self.request_json,
-                    response,
-                    self.metadata,
-                ]
-                if self.metadata
-                else [
-                    {asyncllm_instance.cache_hash: self.task_id},
-                    self.request_json,
-                    response,
-                ]
-            )
+            response = self.convert_response(request_url, response)
+            data = self.create_data(asyncllm_instance, response)
+
             if data is not None:
                 asyncllm_instance.response_list.append(data)
-            status_tracker.num_tasks_in_progress -= 1
-            status_tracker.num_tasks_succeeded += 1
-
-            # Save the response immediately after processing the request
-            if cache_filepath is not None:
-                data = (
-                    [
-                        {asyncllm_instance.cache_hash: self.task_id},
-                        self.request_json,
-                        response,
-                        self.metadata,
-                    ]
-                    if self.metadata
-                    else [
-                        {asyncllm_instance.cache_hash: self.task_id},
-                        self.request_json,
-                        response,
-                    ]
-                )
-                if data is not None:
+                # Save the response immediately after processing the request
+                if cache_filepath is not None:
                     json_string = json.dumps(data)
                     with open(cache_filepath, "a") as f:
                         f.write(json_string + "\n")
+
+            status_tracker.num_tasks_in_progress -= 1
+            status_tracker.num_tasks_succeeded += 1
+
+    def create_data(self, asyncllm_instance, response):
+        data = [
+            {asyncllm_instance.cache_hash: self.task_id},
+            self.request_json,
+            response,
+        ] + ([self.metadata] if self.metadata else [])
+        return data
+
+    def convert_response(self, request_url, response):
+        if "anthropic" in request_url:
+            response["usage"] = {
+                "prompt_tokens": response["usage"]["input_tokens"],
+                "completion_tokens": response["usage"]["output_tokens"],
+                "total_tokens": response["usage"]["input_tokens"]
+                + response["usage"]["output_tokens"],
+            }
+            response["object"] = response.pop("type")
+            response["choices"] = [
+                {
+                    "message": {
+                        "role": response.pop("role"),
+                        "content": response.pop("content")[0]["text"],
+                    },
+                    "finish_reason": response.pop("stop_reason"),
+                    "index": response.pop("stop_sequence"),
+                }
+            ]
+            response["created"] = int(time.time())
+        return response
 
 
 class AsyncLLM:
@@ -183,9 +176,15 @@ class AsyncLLM:
         self.api_key = api_key
         self.base_url = base_url
         self.api_provider = api_provider
-        self.max_requests_per_minute = max_requests_per_minute or os.getenv('MAX_REQUESTS_PER_MINUTE', 20)
-        self.max_tokens_per_minute = max_tokens_per_minute or os.getenv('MAX_TOKENS_PER_MINUTE', 10000000000)
-        self.max_concurrent_requests = max_concurrent_requests or os.getenv('MAX_TOKENS_PER_MINUTE')
+        self.max_requests_per_minute = max_requests_per_minute or os.getenv(
+            "MAX_REQUESTS_PER_MINUTE", 20
+        )
+        self.max_tokens_per_minute = max_tokens_per_minute or os.getenv(
+            "MAX_TOKENS_PER_MINUTE", 10000000000
+        )
+        self.max_concurrent_requests = max_concurrent_requests or os.getenv(
+            "MAX_TOKENS_PER_MINUTE"
+        )
         self.max_rps = max_rps
         self.max_attempts = max_attempts
         self.token_encoding_name = token_encoding_name
@@ -205,20 +204,19 @@ class AsyncLLM:
             self.model = model_dict.get(self.base_url)
         else:
             raise ValueError("Model not provided.")
-        
+
         if self.api_provider == "together":
             self.max_rps = True
 
     def get_request_url(self):
         if self.base_url:
-            
             if not self.api_provider:
                 # If api_provider is not set, get it from base_url_dict
                 for provider, urls in base_url_dict.items():
                     if self.base_url in urls.values():
                         self.api_provider = provider
                         break
-            
+
             if self.api_provider == "together":
                 self.max_rps = True
 
@@ -271,6 +269,13 @@ class AsyncLLM:
         # use api-key header for Azure deployments
         if "/deployments" in request_url:
             request_header = {"api-key": f"{api_key}"}
+        # Use x-api-key for Anthropic
+        if "anthropic" in request_url:
+            request_header = {
+                "x-api-key": f"{api_key}",
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            }
 
         # initialize trackers
         queue_of_requests_to_retry = asyncio.Queue()
@@ -284,7 +289,11 @@ class AsyncLLM:
         next_request = None  # variable to hold the next request to call
 
         # initialize available capacity counts
-        available_request_capacity = self.max_requests_per_minute / 60 if self.max_rps else self.max_requests_per_minute 
+        available_request_capacity = (
+            self.max_requests_per_minute / 60
+            if self.max_rps
+            else self.max_requests_per_minute
+        )
         available_token_capacity = self.max_tokens_per_minute
         last_update_time = time.time()
 
@@ -292,7 +301,11 @@ class AsyncLLM:
         list_not_finished = True  # after list is empty, we'll skip reading it
         logging.debug("Initialization complete.")
 
-        semaphore = asyncio.Semaphore(self.max_concurrent_requests) if self.max_concurrent_requests else None
+        semaphore = (
+            asyncio.Semaphore(self.max_concurrent_requests)
+            if self.max_concurrent_requests
+            else None
+        )
 
         # initialize list reading
         requests = iter(request_list)
@@ -361,23 +374,24 @@ class AsyncLLM:
                 # if enough capacity available, call API
                 if next_request:
                     next_request_tokens = next_request.token_consumption
-                    if (
-                        self.max_concurrent_requests is not None or
-                        (available_request_capacity >= 1 and available_token_capacity >= next_request_tokens)
+                    if self.max_concurrent_requests is not None or (
+                        available_request_capacity >= 1
+                        and available_token_capacity >= next_request_tokens
                     ):
-
                         # call API
                         if semaphore:
-                            asyncio.create_task(self._call_api_with_semaphore(
-                                semaphore,
-                                next_request,
-                                session,
-                                request_url,
-                                request_header,
-                                queue_of_requests_to_retry,
-                                cache_filepath,
-                                status_tracker,
-                            ))
+                            asyncio.create_task(
+                                self._call_api_with_semaphore(
+                                    semaphore,
+                                    next_request,
+                                    session,
+                                    request_url,
+                                    request_header,
+                                    queue_of_requests_to_retry,
+                                    cache_filepath,
+                                    status_tracker,
+                                )
+                            )
                         else:
                             # update counters
                             available_request_capacity -= 1
@@ -454,14 +468,14 @@ class AsyncLLM:
         """Count the number of tokens in the request. Only supports completion and embedding requests."""
         encoding = tiktoken.get_encoding(token_encoding_name)
         # if completions request, tokens = prompt + n * max_tokens
-        if api_endpoint.endswith("completions"):
+        if api_endpoint.endswith(("completions", "messages")):
             max_tokens = request_json.get("max_tokens", 15)
             n = request_json.get("n", 1)
             completion_tokens = n * max_tokens
 
             # chat completions
             # if api_endpoint.startswith("chat/"):
-            if "chat/" in api_endpoint:
+            if "chat/" in api_endpoint or "messages" in api_endpoint:
                 num_tokens = 0
                 for message in request_json["messages"]:
                     num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
@@ -506,7 +520,7 @@ class AsyncLLM:
             raise NotImplementedError(
                 f'API endpoint "{api_endpoint}" not implemented in this script'
             )
-        
+
     async def _call_api_with_semaphore(
         self,
         semaphore: asyncio.Semaphore,
@@ -540,26 +554,26 @@ class AsyncLLM:
         request_url, api_key = self.get_requesturl_apikey()
 
         ignore_keys = [
-                "cache_hash",
-                "skip_task_ids",
-                "task_id_generator",
-                "response_list",
-                "use_cache",
-                "max_requests_per_minute",
-                "max_tokens_per_minute",
-                "max_attempts",
-                "max_concurrent_requests",
-                "max_rps",
-                "api_key"
+            "cache_hash",
+            "skip_task_ids",
+            "task_id_generator",
+            "response_list",
+            "use_cache",
+            "max_requests_per_minute",
+            "max_tokens_per_minute",
+            "max_attempts",
+            "max_concurrent_requests",
+            "max_rps",
+            "api_key",
         ]
 
         # Check if 'model' is present in all request items
-        if all('model' in request for request in request_list):
+        if all("model" in request for request in request_list):
             # Since all request already have model, we can ignore self.model for cache.
-            ignore_keys.append('model')
+            ignore_keys.append("model")
         else:
             for request in request_list:
-                if 'model' not in request:
+                if "model" not in request:
                     request["model"] = self.model
 
         if task_id_generator:

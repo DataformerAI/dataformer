@@ -6,6 +6,7 @@ model_dict = {
     "https://api.endpoints.anyscale.com/v1/chat/completions": "mistralai/Mistral-7B-Instruct-v0.1",
     "https://api.deepinfra.com/v1/openai/chat/completions": "meta-llama/Meta-Llama-3-8B-Instruct",
     "https://openrouter.ai/api/v1/chat/completions": "openai/gpt-3.5-turbo",
+    "https://api.anthropic.com/v1/messages": "claude-3-5-sonnet-20240620",
 }
 
 base_url_dict = {
@@ -36,6 +37,9 @@ base_url_dict = {
     "openrouter": {
         "chat": "https://openrouter.ai/api/v1/chat/completions",
         "text": "https://openrouter.ai/api/v1/completions",
+    },
+    "anthropic": {
+        "chat": "https://api.anthropic.com/v1/messages",
     },
 }
 
