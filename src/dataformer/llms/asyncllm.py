@@ -172,6 +172,7 @@ class AsyncLLM:
         logging_level=logging.INFO,
         gen_type="chat",
         cache_dir=".cache/dataformer",
+        clear_prev_cache:bool = False
     ):
         self.api_key = api_key
         self.base_url = base_url
@@ -193,6 +194,7 @@ class AsyncLLM:
         self.skip_task_ids = []
         self.cache_dir = cache_dir
         self.task_id_generator = None
+        self.clear_prev_cache = clear_prev_cache
 
         # initialize logging
         logging.basicConfig(level=self.logging_level, force=True)
@@ -565,6 +567,7 @@ class AsyncLLM:
             "max_concurrent_requests",
             "max_rps",
             "api_key",
+            "clear_prev_cache",
         ]
 
         # Check if 'model' is present in all request items
@@ -601,15 +604,19 @@ class AsyncLLM:
             cache_filepath = f"{self.cache_dir}/{str(self.cache_hash)}.jsonl"
 
             if os.path.exists(cache_filepath):
-                with open(cache_filepath, "r") as f:
-                    cached_responses = f.readlines()
-                cached_indices = []
-                for response in cached_responses:
-                    response_json = json.loads(response)
-                    self.response_list.append(response_json)
-                    if self.cache_hash in response_json[0].keys():
-                        cached_indices.append(response_json[0][self.cache_hash])
-                self.skip_task_ids = cached_indices
+                if self.clear_prev_cache:
+                    os.remove(cache_filepath)
+                    self.clear_prev_cache=False
+                else:
+                    with open(cache_filepath, "r") as f:
+                        cached_responses = f.readlines()
+                    cached_indices = []
+                    for response in cached_responses:
+                        response_json = json.loads(response)
+                        self.response_list.append(response_json)
+                        if self.cache_hash in response_json[0].keys():
+                            cached_indices.append(response_json[0][self.cache_hash])
+                    self.skip_task_ids = cached_indices
 
         asyncio.run(
             self.process_api_requests(

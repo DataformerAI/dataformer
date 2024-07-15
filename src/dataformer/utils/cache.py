@@ -1,5 +1,6 @@
 import hashlib
-
+import shutil
+import os
 
 def get_cache_vars(input, ignore_keys=None, additional_data=None):
     cache_vars = vars(input)
@@ -40,3 +41,11 @@ def task_id_generator_function():
     while True:
         yield task_id
         task_id += 1
+        
+def delete_cache_folder(dir_path=".cache/dataformer"):
+    if os.path.exists(dir_path):
+        try:
+            shutil.rmtree(dir_path)
+            print(f"Directory {dir_path} has been deleted successfully.")
+        except Exception as e:
+            print(f"Error: {e}")
