@@ -172,7 +172,6 @@ class AsyncLLM:
         logging_level=logging.INFO,
         gen_type="chat",
         cache_dir=".cache/dataformer",
-        clear_prev_cache:bool = False
     ):
         self.api_key = api_key
         self.base_url = base_url
@@ -194,8 +193,6 @@ class AsyncLLM:
         self.skip_task_ids = []
         self.cache_dir = cache_dir
         self.task_id_generator = None
-        self.clear_prev_cache = clear_prev_cache
-
         # initialize logging
         logging.basicConfig(level=self.logging_level, force=True)
 
@@ -551,6 +548,7 @@ class AsyncLLM:
         cache_vars: typing.Dict = {},
         task_id_generator=None,
         use_cache=True,
+        clear_prev_cache=False
     ):
         # Set base_url before any caching
         request_url, api_key = self.get_requesturl_apikey()
@@ -566,8 +564,7 @@ class AsyncLLM:
             "max_attempts",
             "max_concurrent_requests",
             "max_rps",
-            "api_key",
-            "clear_prev_cache",
+            "api_key"
         ]
 
         # Check if 'model' is present in all request items
@@ -597,26 +594,28 @@ class AsyncLLM:
         self.cache_hash = create_hash(cache_vars)
 
         self.skip_task_ids = []
-        cache_filepath = None
+
+        cache_filepath = f"{self.cache_dir}/{str(self.cache_hash)}.jsonl"
+
+        if clear_prev_cache and os.path.exists(cache_filepath):
+            os.remove(cache_filepath)
+
         if use_cache:
             if not os.path.exists(self.cache_dir):
                 os.makedirs(self.cache_dir)
-            cache_filepath = f"{self.cache_dir}/{str(self.cache_hash)}.jsonl"
-
+            
             if os.path.exists(cache_filepath):
-                if self.clear_prev_cache:
-                    os.remove(cache_filepath)
-                    self.clear_prev_cache=False
-                else:
-                    with open(cache_filepath, "r") as f:
-                        cached_responses = f.readlines()
-                    cached_indices = []
-                    for response in cached_responses:
-                        response_json = json.loads(response)
-                        self.response_list.append(response_json)
-                        if self.cache_hash in response_json[0].keys():
-                            cached_indices.append(response_json[0][self.cache_hash])
-                    self.skip_task_ids = cached_indices
+                with open(cache_filepath, "r") as f:
+                    cached_responses = f.readlines()
+                cached_indices = []
+                for response in cached_responses:
+                    response_json = json.loads(response)
+                    self.response_list.append(response_json)
+                    if self.cache_hash in response_json[0].keys():
+                        cached_indices.append(response_json[0][self.cache_hash])
+                self.skip_task_ids = cached_indices
+        else:
+            cache_filepath = None
 
         asyncio.run(
             self.process_api_requests(

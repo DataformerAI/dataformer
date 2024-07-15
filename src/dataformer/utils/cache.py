@@ -42,7 +42,7 @@ def task_id_generator_function():
         yield task_id
         task_id += 1
         
-def delete_cache_folder(dir_path=".cache/dataformer"):
+def delete_cache(dir_path=".cache/dataformer"):
     if os.path.exists(dir_path):
         try:
             shutil.rmtree(dir_path)
