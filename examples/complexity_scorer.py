@@ -19,4 +19,12 @@ results = scorer.score(
     input, use_cache=False
     ) # By default cache is True.
 
-print(results)
+print("\n\n")
+for result in results:
+    instructions = result['instructions']
+    scores = result['scores']
+    raw_output = result['raw output']
+    for i in range(len(instructions)):
+        print(f"{COLOR['BLUE']}Instruction: {instructions[i]}{COLOR['ENDC']}")
+        print(f"{COLOR['GREEN']}Score: {scores[i]}{COLOR['ENDC']}")
+    print("\n")
