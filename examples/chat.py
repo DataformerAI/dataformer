@@ -29,4 +29,5 @@ response_list = llm.generate(request_list)
 for request, response in zip(request_list, response_list):
     prompt = request["messages"][0]["content"]
     answer = response[1]["choices"][0]["message"]["content"]
-    print(f"Prompt: {prompt}\nAnswer: {answer}\n")
+    print(f"{COLOR['BLUE']}Prompt: {prompt}{COLOR['ENDC']}\n{COLOR['GREEN']}Answer: {answer}{COLOR['ENDC']}\n")
+
