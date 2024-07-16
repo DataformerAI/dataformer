@@ -75,6 +75,7 @@ class QualityScorer:
                         })
             result = {
                 "instruction": input['instruction'],
+                "responses": input['responses']
             }
             self.results.append(result)
 
