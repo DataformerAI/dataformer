@@ -37,8 +37,7 @@ results = evol_instruct.generate(
 print("\n\n")
 for item in results:
     print(f"{COLOR['BLUE']}Original Instruction: {item['original_instruction']}{COLOR['ENDC']}")
-    for evolved_instruction in item['evolved_instructions']:
+    for evolved_instruction, answer in zip(item['evolved_instructions'], item['answers']):
         print(f"{COLOR['GREEN']}Evolved Instruction: {evolved_instruction}{COLOR['ENDC']}")
-    for answer in item['answers']:
         print(f"{COLOR['PURPLE']}Answer: {answer}{COLOR['ENDC']}")
     print("\n")

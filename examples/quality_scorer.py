@@ -34,11 +34,11 @@ results = scorer.score(
     ) # By default cache is True.
 
 for result in results:
-    instructions = [result['instruction']]  # Wrapping instruction in a list for uniform iteration
+    instruction = result['instruction']
+    responses = result['responses']
     scores = result['scores']
-    for i in range(max(len(instructions), len(scores))):
-        if i < len(instructions):
-            print(f"{COLOR['BLUE']}Instruction: {instructions[i]}{COLOR['ENDC']}")
-        if i < len(scores):
-            print(f"{COLOR['GREEN']}Score{i+1}: {scores[i]}{COLOR['ENDC']}")
+    print(f"{COLOR['BLUE']}Instruction: {instruction}{COLOR['ENDC']}")
+    for i in range(len(responses)):
+        print(f"{COLOR['PURPLE']}Response{i+1}: {responses[i]}{COLOR['ENDC']}")
+        print(f"{COLOR['GREEN']}Score{i+1}: {scores[i]}{COLOR['ENDC']}")
     print("\n")
