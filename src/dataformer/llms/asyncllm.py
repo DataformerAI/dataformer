@@ -177,7 +177,7 @@ class AsyncLLM:
         self.base_url = base_url
         self.api_provider = api_provider
         self.max_requests_per_minute = max_requests_per_minute or os.getenv(
-            "MAX_REQUESTS_PER_MINUTE", 20
+            "MAX_REQUESTS_PER_MINUTE", 60
         )
         self.max_tokens_per_minute = max_tokens_per_minute or os.getenv(
             "MAX_TOKENS_PER_MINUTE", 10000000000
