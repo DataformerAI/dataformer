@@ -5,6 +5,17 @@ deita = Deita(
     diversity_threshold=0.9, # minimum cosine distance with respect to it's nearest neighbor, default value = 0.7
 )
 
+COLOR = {
+    "RED": "\033[91m",
+    "GREEN": "\033[92m",
+    "YELLOW": "\033[93m",
+    "BLUE": "\033[94m",
+    "PURPLE": "\033[95m",
+    "CYAN": "\033[96m",
+    "WHITE": "\033[97m",
+    "ENDC": "\033[0m",
+}
+
 inputs = [
             {
                 "evol_instruction_score": 0.3, # instruction score from complexity scorer
@@ -25,4 +36,4 @@ inputs = [
 
 results = deita.filter(inputs)
 
-print(results)
+print(f"{COLOR['GREEN']}{results}{COLOR['ENDC']}")
