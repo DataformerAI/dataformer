@@ -25,4 +25,12 @@ inputs = [
 
 results = deita.filter(inputs)
 
-print(results)
+print("\n\n")
+for item in results:
+    print(f"{COLOR['BLUE']}Evolved Instruction Score: {item['evol_instruction_score']}{COLOR['ENDC']}")
+    print(f"{COLOR['GREEN']}Evolved Response Score: {item['evol_response_score']}{COLOR['ENDC']}")
+    print(f"{COLOR['YELLOW']}Embedding: {item['embedding']}{COLOR['ENDC']}")
+    print(f"{COLOR['PURPLE']}Deita Score: {item['deita_score']}{COLOR['ENDC']}")
+    print(f"{COLOR['CYAN']}Deita Score Computed With: {item['deita_score_computed_with']}{COLOR['ENDC']}")
+    print(f"{COLOR['BLUE']}Nearest Neighbor Distance: {item['nearest_neighbor_distance']}{COLOR['ENDC']}")
+    print("\n")
