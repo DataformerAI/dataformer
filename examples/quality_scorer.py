@@ -4,6 +4,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+COLOR = {
+    "RED": "\033[91m",
+    "GREEN": "\033[92m",
+    "YELLOW": "\033[93m",
+    "BLUE": "\033[94m",
+    "PURPLE": "\033[95m",
+    "CYAN": "\033[96m",
+    "WHITE": "\033[97m",
+    "ENDC": "\033[0m",
+}
+
 input = [{"instruction": "What are the key features of Python programming language?",
           "responses": ["Python is known for its simplicity, readability, and versatility. It supports multiple programming paradigms, has a rich standard library, and is widely used in various domains such as web development, data science, and automation.",
                         "Python is a language. It is used for coding. Some people like it. It can do things. There are libraries. It is not the only language. Some say it's good, others not so much.",
