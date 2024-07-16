@@ -22,4 +22,13 @@ results = scorer.score(
     input, use_cache=False
     ) # By default cache is True.
 
-print(results)
+print("\n\n")
+for result in results:
+    instructions = result['instructions']
+    scores = result['scores']
+    for i in range(max(len(instructions), len(scores))):
+        if i < len(instructions):
+            print(f"{COLOR['BLUE']}Instruction: {instructions[i]}{COLOR['ENDC']}")
+        if i < len(scores):
+            print(f"{COLOR['GREEN']}Score: {scores[i]}{COLOR['ENDC']}")
+    print("\n")
