@@ -24,4 +24,11 @@ results = evol_instruct.generate(
     instructions, use_cache=False
 )  # By default cache is True.
 
-print(results)
+print("\n\n")
+for item in results:
+    print(f"{COLOR['BLUE']}Original Instruction: {item['original_instruction']}{COLOR['ENDC']}")
+    for evolved_instruction in item['evolved_instructions']:
+        print(f"{COLOR['GREEN']}Evolved Instruction: {evolved_instruction}{COLOR['ENDC']}")
+    for answer in item['answers']:
+        print(f"{COLOR['PURPLE']}Answer: {answer}{COLOR['ENDC']}")
+    print("\n")
