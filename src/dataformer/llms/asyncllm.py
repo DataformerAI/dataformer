@@ -502,7 +502,7 @@ class AsyncLLM:
                         'Expecting either string or list of strings for "prompt" field in completion request'
                     )
         # if embeddings request, tokens = input tokens
-        elif api_endpoint == "embeddings":
+        elif api_endpoint.endswith("embeddings"):
             input = request_json["input"]
             if isinstance(input, str):  # single input
                 num_tokens = len(encoding.encode(input))
