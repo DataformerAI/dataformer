@@ -91,9 +91,7 @@ class APIRequest:
                         1  # rate limit errors are counted separately
                     )
 
-        except (
-            Exception
-        ) as e:  # catching naked exceptions is bad practice, but in this case we'll log & save them
+        except Exception as e:  # catching naked exceptions is bad practice, but in this case we'll log & save them
             logging.warning(f"Request {self.task_id} failed with Exception {e}")
             status_tracker.num_other_errors += 1
             error = e
@@ -158,7 +156,7 @@ class APIRequest:
                 }
             ]
             response["created"] = int(time.time())
-        return response
+            return response
 
         words = "ollama", "11434", "api/chat", "api/generate"
         if any(word in request_url for word in words):
@@ -189,7 +187,7 @@ class APIRequest:
                 "eval_duration",
             ):
                 response.pop(key, None)
-        return response
+            return response
 
 
 class AsyncLLM:
@@ -509,15 +507,21 @@ class AsyncLLM:
     ):
         """Count the number of tokens in the request. Only supports completion and embedding requests."""
         encoding = tiktoken.get_encoding(token_encoding_name)
+
+        ollama_flag = any(
+            word in self.base_url
+            for word in ("ollama", "11434", "api/chat", "api/generate")
+        )
+
         # if completions request, tokens = prompt + n * max_tokens
-        if api_endpoint.endswith(("completions", "messages")):
+        if api_endpoint.endswith(("completions", "messages")) or ollama_flag:
             max_tokens = request_json.get("max_tokens", 15)
             n = request_json.get("n", 1)
             completion_tokens = n * max_tokens
 
             # chat completions
             # if api_endpoint.startswith("chat/"):
-            if "chat/" in api_endpoint or "messages" in api_endpoint:
+            if "chat/" in api_endpoint or "messages" in api_endpoint or ollama_flag:
                 num_tokens = 0
                 for message in request_json["messages"]:
                     num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
@@ -557,11 +561,6 @@ class AsyncLLM:
                 raise TypeError(
                     'Expecting either string or list of strings for "inputs" field in embedding request'
                 )
-        elif any(
-            word in self.base_url
-            for word in ("ollama", "11434", "api/chat", "api/generate")
-        ):
-            return 0
         # more logic needed to support other API calls (e.g., edits, inserts, DALL-E)
         else:
             raise NotImplementedError(
@@ -596,7 +595,7 @@ class AsyncLLM:
         cache_vars: typing.Dict = {},
         task_id_generator=None,
         use_cache=True,
-        clear_prev_cache=False
+        clear_prev_cache=False,
     ):
         # Set base_url before any caching
         request_url, api_key = self.get_requesturl_apikey()
@@ -612,7 +611,7 @@ class AsyncLLM:
             "max_attempts",
             "max_concurrent_requests",
             "max_rps",
-            "api_key"
+            "api_key",
         ]
 
         # Check if 'model' is present in all request items
@@ -651,7 +650,7 @@ class AsyncLLM:
         if use_cache:
             if not os.path.exists(self.cache_dir):
                 os.makedirs(self.cache_dir)
-            
+
             if os.path.exists(cache_filepath):
                 with open(cache_filepath, "r") as f:
                     cached_responses = f.readlines()
