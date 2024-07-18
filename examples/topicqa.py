@@ -1,9 +1,13 @@
+# Create QAs from a Topic
+
 import random
 
-import pandas as pd
 from dataformer.llms.asyncllm import AsyncLLM
+from dotenv import load_dotenv
+load_dotenv()
+import os
 
-api_key = ""
+api_key = os.environ.get("OPENAI_API_KEY") 
 llm = AsyncLLM(api_key, api_provider="openai")
 
 
@@ -33,7 +37,7 @@ MESSAGES = [
     "",
 ]
 
-num_questions = 10
+num_questions = 2
 request_list = []
 
 for topic in topics:
@@ -58,5 +62,10 @@ request_list = [
 answers = llm.generate(request_list)
 answers = [response[1]["choices"][0]["message"]["content"] for response in answers]
 
-df = pd.DataFrame({"Question": questions, "Answer": answers})
-df.to_csv("dataset.csv")
+import json
+
+data = [{"Question": q, "Answer": a} for q, a in zip(questions, answers)]
+with open('dataset.jsonl', 'w') as f:
+    for entry in data:
+        json.dump(entry, f, ensure_ascii=False)
+        f.write('\n')
