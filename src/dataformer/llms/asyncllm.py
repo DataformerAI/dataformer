@@ -134,7 +134,10 @@ class APIRequest:
         return data
 
     def convert_response(self, request_url, response):
-        if "anthropic" in request_url:
+        ollama_keys = ("ollama", "11434", "api/chat", "api/generate")
+        if request_url.endswith("completions"):
+            return response
+        elif "anthropic" in request_url:
             response["usage"] = {
                 "prompt_tokens": response["usage"]["input_tokens"],
                 "completion_tokens": response["usage"]["output_tokens"],
@@ -144,16 +147,47 @@ class APIRequest:
             response["object"] = response.pop("type")
             response["choices"] = [
                 {
+                    "index": response.pop("stop_sequence"),
                     "message": {
                         "role": response.pop("role"),
                         "content": response.pop("content")[0]["text"],
                     },
                     "finish_reason": response.pop("stop_reason"),
-                    "index": response.pop("stop_sequence"),
                 }
             ]
             response["created"] = int(time.time())
-        return response
+            return response
+        elif any(word in request_url for word in ollama_keys):
+            response["object"] = (
+                "ollama.chat" if "chat" in request_url else "ollama.generate"
+            )
+            response["created"] = response.pop("created_at")
+            response["system_fingerprint"] = "fp_ollama"
+            response["choices"] = [
+                {
+                    "index": 0,
+                    "message": response.pop("message"),
+                    "finish_reason": response.pop("done_reason"),
+                }
+            ]
+            response["usage"] = {
+                "prompt_tokens": response["prompt_eval_count"],
+                "completion_tokens": response["eval_count"],
+                "total_tokens": response.pop("prompt_eval_count")
+                + response.pop("eval_count"),
+            }
+
+            for key in (
+                "done",
+                "total_duration",
+                "load_duration",
+                "prompt_eval_duration",
+                "eval_duration",
+            ):
+                response.pop(key, None)
+            return response
+        else:
+            return response
 
 
 class AsyncLLM:
@@ -235,6 +269,8 @@ class AsyncLLM:
         return self.base_url
 
     def get_api_key(self):
+        if self.api_provider == "ollama":
+            return "ollama"
         if self.api_key:
             return self.api_key
         else:
@@ -269,11 +305,16 @@ class AsyncLLM:
         if "/deployments" in request_url:
             request_header = {"api-key": f"{api_key}"}
         # Use x-api-key for Anthropic
-        if "anthropic" in request_url:
+        if self.api_provider == "anthropic":
             request_header = {
                 "x-api-key": f"{api_key}",
                 "anthropic-version": "2023-06-01",
                 "content-type": "application/json",
+            }
+        if self.api_provider == "ollama":
+            request_header = {
+                "Content-Type": "application/json",
+                "api_key": api_key,
             }
 
         # initialize trackers
@@ -466,15 +507,21 @@ class AsyncLLM:
     ):
         """Count the number of tokens in the request. Only supports completion and embedding requests."""
         encoding = tiktoken.get_encoding(token_encoding_name)
+
+        ollama_flag = any(
+            word in self.base_url
+            for word in ("ollama", "11434", "api/chat", "api/generate")
+        )
+
         # if completions request, tokens = prompt + n * max_tokens
-        if api_endpoint.endswith(("completions", "messages")):
+        if api_endpoint.endswith(("completions", "messages")) or ollama_flag:
             max_tokens = request_json.get("max_tokens", 15)
             n = request_json.get("n", 1)
             completion_tokens = n * max_tokens
 
             # chat completions
             # if api_endpoint.startswith("chat/"):
-            if "chat/" in api_endpoint or "messages" in api_endpoint:
+            if "chat/" in api_endpoint or "messages" in api_endpoint or ollama_flag:
                 num_tokens = 0
                 for message in request_json["messages"]:
                     num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
@@ -548,7 +595,7 @@ class AsyncLLM:
         cache_vars: typing.Dict = {},
         task_id_generator=None,
         use_cache=True,
-        clear_prev_cache=False
+        clear_prev_cache=False,
     ):
         # Set base_url before any caching
         request_url, api_key = self.get_requesturl_apikey()
@@ -564,7 +611,7 @@ class AsyncLLM:
             "max_attempts",
             "max_concurrent_requests",
             "max_rps",
-            "api_key"
+            "api_key",
         ]
 
         # Check if 'model' is present in all request items
@@ -603,7 +650,7 @@ class AsyncLLM:
         if use_cache:
             if not os.path.exists(self.cache_dir):
                 os.makedirs(self.cache_dir)
-            
+
             if os.path.exists(cache_filepath):
                 with open(cache_filepath, "r") as f:
                     cached_responses = f.readlines()
