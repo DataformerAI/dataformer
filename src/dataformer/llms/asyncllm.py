@@ -91,7 +91,9 @@ class APIRequest:
                         1  # rate limit errors are counted separately
                     )
 
-        except Exception as e:  # catching naked exceptions is bad practice, but in this case we'll log & save them
+        except (
+            Exception
+        ) as e:  # catching naked exceptions is bad practice, but in this case we'll log & save them
             logging.warning(f"Request {self.task_id} failed with Exception {e}")
             status_tracker.num_other_errors += 1
             error = e
@@ -134,6 +136,9 @@ class APIRequest:
         return data
 
     def convert_response(self, request_url, response):
+        if request_url.endswith("completions"):
+            return response
+
         if "anthropic" in request_url:
             response["usage"] = {
                 "prompt_tokens": response["usage"]["input_tokens"],
@@ -144,15 +149,46 @@ class APIRequest:
             response["object"] = response.pop("type")
             response["choices"] = [
                 {
+                    "index": response.pop("stop_sequence"),
                     "message": {
                         "role": response.pop("role"),
                         "content": response.pop("content")[0]["text"],
                     },
                     "finish_reason": response.pop("stop_reason"),
-                    "index": response.pop("stop_sequence"),
                 }
             ]
             response["created"] = int(time.time())
+        return response
+
+        words = "ollama", "11434", "api/chat", "api/generate"
+        if any(word in request_url for word in words):
+            response["object"] = (
+                "ollama.chat" if "chat" in request_url else "ollama.generate"
+            )
+            response["created"] = response.pop("created_at")
+            response["system_fingerprint"] = "fp_ollama"
+            response["choices"] = [
+                {
+                    "index": 0,
+                    "message": response.pop("message"),
+                    "finish_reason": response.pop("done_reason"),
+                }
+            ]
+            response["usage"] = {
+                "prompt_tokens": response["prompt_eval_count"],
+                "completion_tokens": response["eval_count"],
+                "total_tokens": response.pop("prompt_eval_count")
+                + response.pop("eval_count"),
+            }
+
+            for key in (
+                "done",
+                "total_duration",
+                "load_duration",
+                "prompt_eval_duration",
+                "eval_duration",
+            ):
+                response.pop(key, None)
         return response
 
 
@@ -236,6 +272,8 @@ class AsyncLLM:
         return self.base_url
 
     def get_api_key(self):
+        if self.api_provider == "ollama":
+            return "ollama"
         if self.api_key:
             return self.api_key
         else:
@@ -270,11 +308,16 @@ class AsyncLLM:
         if "/deployments" in request_url:
             request_header = {"api-key": f"{api_key}"}
         # Use x-api-key for Anthropic
-        if "anthropic" in request_url:
+        if self.api_provider == "anthropic":
             request_header = {
                 "x-api-key": f"{api_key}",
                 "anthropic-version": "2023-06-01",
                 "content-type": "application/json",
+            }
+        if self.api_provider == "ollama":
+            request_header = {
+                "Content-Type": "application/json",
+                "api_key": api_key,
             }
 
         # initialize trackers
@@ -515,6 +558,11 @@ class AsyncLLM:
                 raise TypeError(
                     'Expecting either string or list of strings for "inputs" field in embedding request'
                 )
+        elif any(
+            word in self.base_url
+            for word in ("ollama", "11434", "api/chat", "api/generate")
+        ):
+            return 0
         # more logic needed to support other API calls (e.g., edits, inserts, DALL-E)
         else:
             raise NotImplementedError(
