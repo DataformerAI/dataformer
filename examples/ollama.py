@@ -1,13 +1,16 @@
 from dataformer.llms.asyncllm import AsyncLLM
 
-# Enter Ollama local or runpod URL
 url = "https://a42o6nb8qoh1n6-11434.proxy.runpod.net/v1/chat/completions"  # OpenAI compatible API
-url = "https://a42o6nb8qoh1n6-11434.proxy.runpod.net/api/chat"  # Ollama default API
+url = "https://a42o6nb8qoh1n6-11434.proxy.runpod.net/api/chat"  # Ollama default API - chat & generate endpoints
+
+# OpenAI chat/completions and Ollama chat endpoints both have the same input & output structure for convenience
+
 model = "tinyllama"
 
 llm = AsyncLLM(base_url=url, api_provider="ollama", model=model)
 
 prompt = "hi tinyllama"
+
 # Add stream = False in request
 request_list = [{"messages": [{"role": "user", "content": prompt}], "stream": False}]
 
