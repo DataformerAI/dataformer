@@ -4,6 +4,16 @@ from datasets import load_dataset
 from dotenv import load_dotenv
 
 load_dotenv()
+COLOR = {
+    "RED": "\033[91m",
+    "GREEN": "\033[92m",
+    "YELLOW": "\033[93m",
+    "BLUE": "\033[94m",
+    "PURPLE": "\033[95m",
+    "CYAN": "\033[96m",
+    "WHITE": "\033[97m",
+    "ENDC": "\033[0m",
+}
 
 dataset = load_dataset("dataformer/self-knowledge")
 datasetsub = dataset["train"].select(range(2))
@@ -24,4 +34,10 @@ results = evol_instruct.generate(
     instructions, use_cache=False
 )  # By default cache is True.
 
-print(results)
+print("\n\n")
+for item in results:
+    print(f"{COLOR['BLUE']}Original Instruction: {item['original_instruction']}{COLOR['ENDC']}")
+    for evolved_instruction, answer in zip(item['evolved_instructions'], item['answers']):
+        print(f"{COLOR['GREEN']}Evolved Instruction: {evolved_instruction}{COLOR['ENDC']}")
+        print(f"{COLOR['PURPLE']}Answer: {answer}{COLOR['ENDC']}")
+    print("\n")
