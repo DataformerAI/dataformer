@@ -134,10 +134,10 @@ class APIRequest:
         return data
 
     def convert_response(self, request_url, response):
+        ollama_keys = ("ollama", "11434", "api/chat", "api/generate")
         if request_url.endswith("completions"):
             return response
-
-        if "anthropic" in request_url:
+        elif "anthropic" in request_url:
             response["usage"] = {
                 "prompt_tokens": response["usage"]["input_tokens"],
                 "completion_tokens": response["usage"]["output_tokens"],
@@ -157,9 +157,7 @@ class APIRequest:
             ]
             response["created"] = int(time.time())
             return response
-
-        words = "ollama", "11434", "api/chat", "api/generate"
-        if any(word in request_url for word in words):
+        elif any(word in request_url for word in ollama_keys):
             response["object"] = (
                 "ollama.chat" if "chat" in request_url else "ollama.generate"
             )
@@ -187,6 +185,8 @@ class APIRequest:
                 "eval_duration",
             ):
                 response.pop(key, None)
+            return response
+        else:
             return response
 
 
