@@ -144,15 +144,15 @@ class APIRequest:
                 "total_tokens": response["usage"]["input_tokens"]
                 + response["usage"]["output_tokens"],
             }
-            response["object"] = response.pop("type")
+            response["object"] = response.pop("type", "")
             response["choices"] = [
                 {
-                    "index": response.pop("stop_sequence"),
+                    "index": response.pop("stop_sequence", ""),
                     "message": {
-                        "role": response.pop("role"),
+                        "role": response.pop("role", ""),
                         "content": response.pop("content")[0]["text"],
                     },
-                    "finish_reason": response.pop("stop_reason"),
+                    "finish_reason": response.pop("stop_reason", ""),
                 }
             ]
             response["created"] = int(time.time())
@@ -161,20 +161,20 @@ class APIRequest:
             response["object"] = (
                 "ollama.chat" if "chat" in request_url else "ollama.generate"
             )
-            response["created"] = response.pop("created_at")
+            response["created"] = response.pop("created_at", int(time.time()))
             response["system_fingerprint"] = "fp_ollama"
             response["choices"] = [
                 {
                     "index": 0,
-                    "message": response.pop("message"),
-                    "finish_reason": response.pop("done_reason"),
+                    "message": response.pop("message", ""),
+                    "finish_reason": response.pop("done_reason", ""),
                 }
             ]
             response["usage"] = {
-                "prompt_tokens": response["prompt_eval_count"],
-                "completion_tokens": response["eval_count"],
-                "total_tokens": response.pop("prompt_eval_count")
-                + response.pop("eval_count"),
+                "prompt_tokens": response.get("prompt_eval_count", 0),
+                "completion_tokens": response.get("eval_count", 0),
+                "total_tokens": response.pop("prompt_eval_count", 0)
+                + response.pop("eval_count", 0),
             }
 
             for key in (
@@ -184,7 +184,7 @@ class APIRequest:
                 "prompt_eval_duration",
                 "eval_duration",
             ):
-                response.pop(key, None)
+                response.pop(key, "")
             return response
         else:
             return response
