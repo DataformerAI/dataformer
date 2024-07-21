@@ -197,6 +197,7 @@ class AsyncLLM:
         base_url="",
         api_provider="openai",
         model="",
+        sampling_params={},
         max_requests_per_minute=None,
         max_tokens_per_minute=None,
         max_concurrent_requests=None,
@@ -226,6 +227,7 @@ class AsyncLLM:
         self.gen_type = gen_type
         self.skip_task_ids = []
         self.cache_dir = cache_dir
+        self.sampling_params = sampling_params
         self.task_id_generator = None
         # initialize logging
         logging.basicConfig(level=self.logging_level, force=True)
@@ -612,6 +614,7 @@ class AsyncLLM:
             "max_concurrent_requests",
             "max_rps",
             "api_key",
+            "sampling_params" # Already part of request_list
         ]
 
         # Check if 'model' is present in all request items
@@ -622,6 +625,11 @@ class AsyncLLM:
             for request in request_list:
                 if "model" not in request:
                     request["model"] = self.model
+
+        for request in request_list:
+            for key, value in self.sampling_params.items():
+                if key not in request:
+                    request[key] = value
 
         if task_id_generator:
             self.task_id_generator = task_id_generator
