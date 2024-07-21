@@ -144,15 +144,15 @@ class APIRequest:
                 "total_tokens": response["usage"]["input_tokens"]
                 + response["usage"]["output_tokens"],
             }
-            response["object"] = response.pop("type")
+            response["object"] = response.pop("type", "")
             response["choices"] = [
                 {
-                    "index": response.pop("stop_sequence"),
+                    "index": response.pop("stop_sequence", ""),
                     "message": {
-                        "role": response.pop("role"),
+                        "role": response.pop("role", ""),
                         "content": response.pop("content")[0]["text"],
                     },
-                    "finish_reason": response.pop("stop_reason"),
+                    "finish_reason": response.pop("stop_reason", ""),
                 }
             ]
             response["created"] = int(time.time())
@@ -161,20 +161,20 @@ class APIRequest:
             response["object"] = (
                 "ollama.chat" if "chat" in request_url else "ollama.generate"
             )
-            response["created"] = response.pop("created_at")
+            response["created"] = response.pop("created_at", int(time.time()))
             response["system_fingerprint"] = "fp_ollama"
             response["choices"] = [
                 {
                     "index": 0,
-                    "message": response.pop("message"),
-                    "finish_reason": response.pop("done_reason"),
+                    "message": response.pop("message", ""),
+                    "finish_reason": response.pop("done_reason", ""),
                 }
             ]
             response["usage"] = {
-                "prompt_tokens": response["prompt_eval_count"],
-                "completion_tokens": response["eval_count"],
-                "total_tokens": response.pop("prompt_eval_count")
-                + response.pop("eval_count"),
+                "prompt_tokens": response.get("prompt_eval_count", 0),
+                "completion_tokens": response.get("eval_count", 0),
+                "total_tokens": response.pop("prompt_eval_count", 0)
+                + response.pop("eval_count", 0),
             }
 
             for key in (
@@ -184,7 +184,7 @@ class APIRequest:
                 "prompt_eval_duration",
                 "eval_duration",
             ):
-                response.pop(key, None)
+                response.pop(key, "")
             return response
         else:
             return response
@@ -197,6 +197,7 @@ class AsyncLLM:
         base_url="",
         api_provider="openai",
         model="",
+        sampling_params={},
         max_requests_per_minute=None,
         max_tokens_per_minute=None,
         max_concurrent_requests=None,
@@ -226,6 +227,7 @@ class AsyncLLM:
         self.gen_type = gen_type
         self.skip_task_ids = []
         self.cache_dir = cache_dir
+        self.sampling_params = sampling_params
         self.task_id_generator = None
         # initialize logging
         logging.basicConfig(level=self.logging_level, force=True)
@@ -612,6 +614,7 @@ class AsyncLLM:
             "max_concurrent_requests",
             "max_rps",
             "api_key",
+            "sampling_params" # Already part of request_list
         ]
 
         # Check if 'model' is present in all request items
@@ -622,6 +625,11 @@ class AsyncLLM:
             for request in request_list:
                 if "model" not in request:
                     request["model"] = self.model
+
+        for request in request_list:
+            for key, value in self.sampling_params.items():
+                if key not in request:
+                    request[key] = value
 
         if task_id_generator:
             self.task_id_generator = task_id_generator
