@@ -1,19 +1,15 @@
-from dataformer.llms.asyncllm import AsyncLLM
+from dataformer.llms import AsyncLLM
 
-url = "https://a42o6nb8qoh1n6-11434.proxy.runpod.net/v1/chat/completions"  # OpenAI compatible API
-url = "https://a42o6nb8qoh1n6-11434.proxy.runpod.net/api/chat"  # Ollama default API - chat & generate endpoints
+# Ollama - openai compatible endpoint
+# Template - https://jarvislabs.ai/templates/ollama
+# Once you create an instance, click on API - to get Endpoint URL & Deploy as such: https://jarvislabs.ai/blogs/ollama_deploy (ollama pull llama3)
+URL = "https://a8da29c1850e1.notebooksa.jarvislabs.net/v1/chat/completions"
 
-# OpenAI chat/completions and Ollama chat endpoints both have the same input & output structure for convenience
+sampling_params = {"temperature": 0.6, "top_p": 1}
+llm = AsyncLLM(model="llama3", base_url=URL, sampling_params=sampling_params, api_provider="ollama", max_requests_per_minute=5)
 
-model = "tinyllama"
-
-llm = AsyncLLM(base_url=url, api_provider="ollama", model=model)
-
-prompt = "hi tinyllama"
-
-# Add stream = False in request
+prompt = "hi there"
 request_list = [{"messages": [{"role": "user", "content": prompt}], "stream": False}]
-
 
 response_list = llm.generate(request_list)
 
