@@ -1,6 +1,6 @@
 import json
 
-from dataformer.components.magpie import MAGPIE
+from dataformer.components import MAGPIE
 from dataformer.llms import AsyncLLM
 
 # Ollama - openai compatible endpoint
