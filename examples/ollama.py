@@ -8,8 +8,8 @@ URL = "https://a8da29c1850e1.notebooksa.jarvislabs.net/v1/chat/completions"
 sampling_params = {"temperature": 0.6, "top_p": 1}
 llm = AsyncLLM(model="llama3", base_url=URL, sampling_params=sampling_params, api_provider="ollama", max_requests_per_minute=5)
 
-prompt = "hi there"
-request_list = [{"messages": [{"role": "user", "content": prompt}], "stream": False}]
+request_list = [{"messages": [{"role": "user", "content": "Hi there!"}], "stream": False},
+                {"messages": [{"role": "user", "content": "Who are you?"}], "stream": False}]
 
 response_list = llm.generate(request_list)
 
