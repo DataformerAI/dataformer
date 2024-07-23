@@ -1,4 +1,6 @@
 from dataformer.llms import AsyncLLM
+from dataformer.utils import get_request_list
+
 from datasets import load_dataset
 from dotenv import load_dotenv
 
@@ -20,9 +22,12 @@ datasetsub = dataset["train"].select(range(5))
 instructions = [example["question"] for example in datasetsub]
 
 
-request_list = [
-    {"messages": [{"role": "user", "content": prompt}]} for prompt in instructions
-]
+sampling_params = {"temperature": 0.7}
+request_list = get_request_list(instructions, sampling_params)
+
+# request_list = [
+#     {"messages": [{"role": "user", "content": prompt}], "temperature": 0.7} for prompt in instructions
+# ]
 
 """
 API Providers
