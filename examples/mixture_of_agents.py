@@ -73,7 +73,7 @@ for llm in reference_models_llms:
 #store and print, the processed responses for passing to the aggregator LLM 
 reference_models_results=[]
 
-print(f"{COLOR['RED']}Models Individual Responses{COLOR['RED']}")
+print(f"{COLOR['RED']}Models Individual Responses{COLOR['ENDC']}")
 model_incr=0
 for response_list in reference_models_response_list:
     #the answers incrementer
@@ -110,7 +110,7 @@ for i in range(len(request_list)):
 response_list_aggregator = aggregator_llm.generate(request_list_aggregator)
 
 #print the response from the aggregator llm
-print(f"{COLOR['RED']}Aggregator Model's Response{COLOR['RED']}")
+print(f"{COLOR['RED']}Aggregator Model's Response{COLOR['ENDC']}")
 for request, response in zip(request_list, response_list):
     prompt = request["messages"][0]["content"]
     answer = response[1]["choices"][0]["message"]["content"]
