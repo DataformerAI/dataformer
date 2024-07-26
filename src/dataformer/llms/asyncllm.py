@@ -352,7 +352,9 @@ class AsyncLLM:
         # initialize list reading
         requests = iter(request_list)
         logging.debug("List opened. Entering main loop")
-        async with aiohttp.ClientSession() as session:  # Initialize ClientSession here
+        # Create a TCPConnector with SSL verification disabled for monsterapi
+        connector = aiohttp.TCPConnector(ssl=False) if "monsterapi.ai" in self.base_url else None
+        async with aiohttp.ClientSession(connector=connector) as session:
             while True:
                 # get next request (if one is not already waiting for capacity)
                 if next_request is None:
