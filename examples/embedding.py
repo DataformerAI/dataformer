@@ -1,6 +1,6 @@
 from dataformer.llms import AsyncLLM
 
-llm = AsyncLLM(base_url="https://api.deepinfra.com/v1/openai/embeddings", model="thenlper/gte-large") # api_key="<your-api-key-here>"
+llm = AsyncLLM(url="https://api.deepinfra.com/v1/openai/embeddings", model="thenlper/gte-large") # api_key="<your-api-key-here>"
 
 instruction = "hey" 
 data_dict = {

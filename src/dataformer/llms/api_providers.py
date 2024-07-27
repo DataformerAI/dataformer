@@ -9,7 +9,7 @@ model_dict = {
     "https://api.anthropic.com/v1/messages": "claude-3-5-sonnet-20240620",
 }
 
-base_url_dict = {
+url_dict = {
     "openai": {
         "chat": "https://api.openai.com/v1/chat/completions",
         "text": "https://api.openai.com/v1/completions",

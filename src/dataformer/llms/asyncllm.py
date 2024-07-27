@@ -16,7 +16,7 @@ from dataclasses import (
 import aiohttp  # for making API calls concurrently
 import tiktoken  # for counting tokens
 
-from dataformer.llms.api_providers import api_key_dict, base_url_dict, model_dict
+from dataformer.llms.api_providers import api_key_dict, url_dict, model_dict
 from dataformer.utils.cache import (
     create_hash,
     get_cache_vars,
@@ -194,7 +194,7 @@ class AsyncLLM:
     def __init__(
         self,
         api_key=None,
-        base_url="",
+        url="",
         api_provider="openai",
         model="",
         sampling_params={},
@@ -209,7 +209,7 @@ class AsyncLLM:
         cache_dir=".cache/dataformer",
     ):
         self.api_key = api_key
-        self.base_url = base_url
+        self.url = url
         self.api_provider = api_provider
         self.max_requests_per_minute = max_requests_per_minute or os.getenv(
             "MAX_REQUESTS_PER_MINUTE", 60
@@ -234,9 +234,9 @@ class AsyncLLM:
 
         if model:
             self.model = model
-        elif self.base_url or self.api_provider:
-            self.base_url = self.base_url or self.get_request_url()
-            self.model = model_dict.get(self.base_url)
+        elif self.url or self.api_provider:
+            self.url = self.url or self.get_request_url()
+            self.model = model_dict.get(self.url)
         else:
             raise ValueError("Model not provided.")
 
@@ -244,31 +244,31 @@ class AsyncLLM:
             self.max_rps = True
 
     def get_request_url(self):
-        if self.base_url:
+        if self.url:
             if not self.api_provider:
-                # If api_provider is not set, get it from base_url_dict
-                for provider, urls in base_url_dict.items():
-                    if self.base_url in urls.values():
+                # If api_provider is not set, get it from url_dict
+                for provider, urls in url_dict.items():
+                    if self.url in urls.values():
                         self.api_provider = provider
                         break
 
             if self.api_provider == "together":
                 self.max_rps = True
 
-            return self.base_url
+            return self.url
 
-        if self.api_provider in base_url_dict:
-            if isinstance(base_url_dict[self.api_provider], dict):
-                if self.gen_type in base_url_dict[self.api_provider]:
-                    self.base_url = base_url_dict[self.api_provider][self.gen_type]
+        if self.api_provider in url_dict:
+            if isinstance(url_dict[self.api_provider], dict):
+                if self.gen_type in url_dict[self.api_provider]:
+                    self.url = url_dict[self.api_provider][self.gen_type]
                 else:
                     raise ValueError("Invalid gen_type provided")
             else:
-                self.base_url = base_url_dict[self.api_provider]
+                self.url = url_dict[self.api_provider]
         else:
             raise ValueError("Invalid API Provider")
 
-        return self.base_url
+        return self.url
 
     def get_api_key(self):
         if self.api_provider == "ollama":
@@ -276,8 +276,8 @@ class AsyncLLM:
         if self.api_key:
             return self.api_key
         else:
-            for base_url, env_var in api_key_dict.items():
-                if base_url in self.base_url:
+            for url, env_var in api_key_dict.items():
+                if url in self.url:
                     return os.getenv(env_var)
 
         raise ValueError("Invalid API Key Provided")
@@ -353,7 +353,7 @@ class AsyncLLM:
         requests = iter(request_list)
         logging.debug("List opened. Entering main loop")
         # Create a TCPConnector with SSL verification disabled for monsterapi
-        connector = aiohttp.TCPConnector(ssl=False) if "monsterapi.ai" in self.base_url else None
+        connector = aiohttp.TCPConnector(ssl=False) if "monsterapi.ai" in self.url else None
         async with aiohttp.ClientSession(connector=connector) as session:
             while True:
                 # get next request (if one is not already waiting for capacity)
@@ -513,7 +513,7 @@ class AsyncLLM:
         encoding = tiktoken.get_encoding(token_encoding_name)
 
         ollama_flag = any(
-            word in self.base_url
+            word in self.url
             for word in ("ollama", "11434", "api/chat", "api/generate")
         )
 
@@ -601,7 +601,7 @@ class AsyncLLM:
         use_cache=True,
         clear_prev_cache=False,
     ):
-        # Set base_url before any caching
+        # Set url before any caching
         request_url, api_key = self.get_requesturl_apikey()
 
         ignore_keys = [
