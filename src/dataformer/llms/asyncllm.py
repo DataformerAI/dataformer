@@ -193,10 +193,10 @@ class APIRequest:
 class AsyncLLM:
     def __init__(
         self,
-        api_key=None,
-        url="",
         api_provider="openai",
         model="",
+        api_key=None,
+        url="",
         sampling_params={},
         max_requests_per_minute=None,
         max_tokens_per_minute=None,
