@@ -1,11 +1,11 @@
 from dataformer.llms import AsyncLLM
 
 #Define the reference models
-reference_models = [
-    "mistralai/Mixtral-8x22B-Instruct-v0.1",
-    "databricks/dbrx-instruct"
+reference_models_providers = {
+    "mistralai/Mixtral-8x22B-Instruct-v0.1":["deepinfra","replace with your api key"],
+    "gpt-4o":["openai","replace with your api key"]
     # Add more reference models here if needed
-]
+}
 
 COLOR = {
     "RED": "\033[91m",
@@ -50,15 +50,17 @@ request_list = [
                 }
                 ]
 
-llm = AsyncLLM(api_provider="deepinfra")
+llm = AsyncLLM()
 
 final_request_list=[]
-for models in reference_models:
+for models in reference_models_providers:
     for request in request_list:
         new =request.copy()
         new["model"]= models
+        new["api_provider"]=reference_models_providers[models][0]
+        new["api_key"] = reference_models_providers[models][1]
         final_request_list.append(new)
-        
+print(final_request_list)     
 #Specify the api provider
 api_provider="deepinfra"
 
@@ -73,7 +75,7 @@ reference_models_results=[]
 
 print(f"{COLOR['RED']}Models Individual Responses{COLOR['ENDC']}")
 model_incr=0
-for i in range(0,len(reference_models_response_list),len(reference_models)):
+for i in range(0,len(reference_models_response_list),len(reference_models_providers)):
     #the answers incrementer
     answer_incr=0
     
@@ -113,4 +115,3 @@ for request, response in zip(request_list, response_list_aggregator):
     prompt = request["messages"][0]["content"]
     answer = response[1]["choices"][0]["message"]["content"]
     print(f"{COLOR['BLUE']}Prompt: {prompt}{COLOR['ENDC']}\n{COLOR['GREEN']}Answer:\n {answer}{COLOR['ENDC']}\n")
-
