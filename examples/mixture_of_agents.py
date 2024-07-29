@@ -63,7 +63,7 @@ for models in reference_models:
 api_provider="deepinfra"
 
 #Define the aggregator llm
-aggregator_llm = AsyncLLM(api_provider=api_provider, model=aggregator_model,api_key="au9Cj0vSyPoKcjIVHCVXnWDmT8hRPnO2")
+aggregator_llm = AsyncLLM(api_provider=api_provider, model=aggregator_model)
 
 #Collect responses from the reference llms
 reference_models_response_list = llm.generate(final_request_list)
