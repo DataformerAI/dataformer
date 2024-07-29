@@ -16,7 +16,7 @@ from dataclasses import (
 import aiohttp  # for making API calls concurrently
 import tiktoken  # for counting tokens
 
-from dataformer.llms.api_providers import api_key_dict, base_url_dict, model_dict
+from dataformer.llms.api_providers import api_key_dict, url_dict, model_dict
 from dataformer.utils.cache import (
     create_hash,
     get_cache_vars,
@@ -195,7 +195,7 @@ class AsyncLLM:
     def __init__(
         self,
         api_key=None,
-        base_url="",
+        url="",
         api_provider="openai",
         model="",
         sampling_params={},
@@ -210,7 +210,7 @@ class AsyncLLM:
         cache_dir=".cache/dataformer",
     ):
         self.api_key = api_key
-        self.base_url = base_url
+        self.url = url
         self.api_provider = api_provider
         self.max_requests_per_minute = max_requests_per_minute or os.getenv(
             "MAX_REQUESTS_PER_MINUTE", 60
@@ -235,9 +235,9 @@ class AsyncLLM:
 
         if model:
             self.model = model
-        elif self.base_url or self.api_provider:
-            self.base_url = self.base_url or self.get_request_url()
-            self.model = model_dict.get(self.base_url)
+        elif self.url or self.api_provider:
+            self.url = self.url or self.get_request_url()
+            self.model = model_dict.get(self.url)
         else:
             raise ValueError("Model not provided.")
 
@@ -245,42 +245,41 @@ class AsyncLLM:
             self.max_rps = True
 
     def get_request_url(self):
-        if self.base_url:
+        if self.url:
             if not self.api_provider:
-                # If api_provider is not set, get it from base_url_dict
-                for provider, urls in base_url_dict.items():
-                    if self.base_url in urls.values():
+                # If api_provider is not set, get it from url_dict
+                for provider, urls in url_dict.items():
+                    if self.url in urls.values():
                         self.api_provider = provider
                         break
 
             if self.api_provider == "together":
                 self.max_rps = True
 
-            return self.base_url
+            return self.url
 
-        if self.api_provider in base_url_dict:
-            if isinstance(base_url_dict[self.api_provider], dict):
-                if self.gen_type in base_url_dict[self.api_provider]:
-                    self.base_url = base_url_dict[self.api_provider][self.gen_type]
+        if self.api_provider in url_dict:
+            if isinstance(url_dict[self.api_provider], dict):
+                if self.gen_type in url_dict[self.api_provider]:
+                    self.url = url_dict[self.api_provider][self.gen_type]
                 else:
                     raise ValueError("Invalid gen_type provided")
             else:
-                self.base_url = base_url_dict[self.api_provider]
+                self.url = url_dict[self.api_provider]
         else:
             raise ValueError("Invalid API Provider")
 
-        return self.base_url
+        return self.url
    
-    #def get_request_url_from_values(self,base_url,api_provider,gen_type="chat"):
-        
+       
     def get_api_key(self):
         if self.api_provider == "ollama":
             return "ollama"
         if self.api_key:
             return self.api_key
         else:
-            for base_url, env_var in api_key_dict.items():
-                if base_url in self.base_url:
+            for url, env_var in api_key_dict.items():
+                if url in self.url:
                     #send key only if it exists
                     if os.getenv(env_var):
                         return os.getenv(env_var)
@@ -292,32 +291,32 @@ class AsyncLLM:
         api_key = self.get_api_key()
         return request_url, api_key
     #Send request url and api provider
-    def get_requesturl_apikey_list(self,base_url,api_provider):
+    def get_requesturl_apikey_list(self,url,api_provider):
         gen_type = self.gen_type
-        if base_url:
+        if url:
             if not api_provider:
-                # If api_provider is not set, get it from base_url_dict
-                for provider, urls in base_url_dict.items():
-                    if base_url in urls.values():
+                # If api_provider is not set, get it from url_dict
+                for provider, urls in url_dict.items():
+                    if url in urls.values():
                         api_provider = provider
                         break
 
             
 
-            return [base_url,api_provider]
+            return [url,api_provider]
 
-        if api_provider in base_url_dict:
-            if isinstance(base_url_dict[api_provider], dict):
-                if gen_type in base_url_dict[api_provider]:
-                    base_url = base_url_dict[api_provider][gen_type]
+        if api_provider in url_dict:
+            if isinstance(url_dict[api_provider], dict):
+                if gen_type in url_dict[api_provider]:
+                    url = url_dict[api_provider][gen_type]
                 else:
                     raise ValueError("Invalid gen_type provided")
             else:
-                base_url = base_url_dict[api_provider]
+                url = url_dict[api_provider]
         else:
             raise ValueError("Invalid API Provider")
 
-        return [base_url,api_provider]
+        return [url,api_provider]
     
 
     async def process_api_requests(
@@ -335,6 +334,7 @@ class AsyncLLM:
 
         if not different_requests:
                 # infer API endpoint and construct request header
+            url = request_url
             api_endpoint = self.api_endpoint_from_url(request_url)
             request_header = {"Authorization": f"Bearer {api_key}"}
             # use api-key header for Azure deployments
@@ -353,6 +353,7 @@ class AsyncLLM:
                     "api_key": api_key,
                 }
         else:
+            url = request_list[0]["url"]
             #first request then set self.max_rps to True if provider is together
             if request_list[0]["api_provider"]=="together":
                 self.max_rps=True
@@ -390,7 +391,9 @@ class AsyncLLM:
         # initialize list reading
         requests = iter(request_list)
         logging.debug("List opened. Entering main loop")
-        async with aiohttp.ClientSession() as session:  # Initialize ClientSession here
+        # Create a TCPConnector with SSL verification disabled for monsterapi
+        connector = aiohttp.TCPConnector(ssl=False) if "monsterapi.ai" in url else None
+        async with aiohttp.ClientSession(connector=connector) as session:  # Initialize ClientSession here
             while True:
                 # get next request (if one is not already waiting for capacity)
                 if next_request is None:
@@ -405,7 +408,7 @@ class AsyncLLM:
                             request_json = next(requests)
                             if different_requests:
                                     ##infer API endpoint and construct request header
-                                    request_url = request_json["base_url"]
+                                    request_url = request_json["url"]
                                     api_key = request_json["api_key"]
                                     api_provider = request_json["api_provider"]
                                     if api_provider=="together":
@@ -431,8 +434,9 @@ class AsyncLLM:
                                             "api_key": api_key,
                                         }
                             #delete the extra keys used above
+                            
                             del request_json["api_key"]
-                            del request_json["base_url"]
+                            del request_json["url"]
                             del request_json["api_provider"]
                             active_task_id = next(self.task_id_generator)
                             if active_task_id in self.skip_task_ids:
@@ -580,7 +584,7 @@ class AsyncLLM:
         encoding = tiktoken.get_encoding(token_encoding_name)
 
         ollama_flag = any(
-            word in self.base_url
+            word in self.url
             for word in ("ollama", "11434", "api/chat", "api/generate")
         )
 
@@ -696,15 +700,15 @@ class AsyncLLM:
                 if "model" not in request:
                     model=self.model
                     api_provider=""
-                    base_url=""
-                    if "base_url" in list(request.keys()) or "api_provider" in list(request.keys()):
+                    url=""
+                    if "url" in list(request.keys()) or "api_provider" in list(request.keys()):
                         if "api_provider" in list(request.keys()):
                             api_provider=request['api_provider']
-                        if "base_url" in list(request.keys()):
-                            base_url=request['base_url']
-                        base_url = self.get_requesturl_apikey_list(base_url,api_provider)[0]
+                        if "url" in list(request.keys()):
+                            url=request['url']
+                        url = self.get_requesturl_apikey_list(url,api_provider)[0]
                         
-                        model = model_dict.get(base_url)
+                        model = model_dict.get(url)
                     
                     request["model"] = model
                     
@@ -714,7 +718,7 @@ class AsyncLLM:
         api_key=""
         different_apis=False
         #check if any provider or base url present in request list
-        if any("api_provider" in request or "base_url" in request for request in request_list):
+        if any("api_provider" in request or "url" in request for request in request_list):
                 different_apis = True
         
         #If no urls or api providers in request means use default in init
@@ -722,7 +726,7 @@ class AsyncLLM:
             request_url = self.get_request_url()
             for requests in request_list:
                 requests['api_provider'] = self.api_provider
-                requests['base_url'] = request_url
+                requests['url'] = request_url
                 api_key=""
                 if "api_key" in list(requests.keys()):
                     api_key=requests['api_key']
@@ -730,21 +734,20 @@ class AsyncLLM:
                     api_key = self.get_api_key()
                 requests['api_key'] = api_key
         else:
-                  
-            if all("api_provider" in request or "base_url" in request for request in request_list):
-                # Since all request already have either api_provider or base_url, we can ignore self.provider or if base_url (if set) for cache.
-                # all requests have either one of api_provider or base_url then no need for initatied or default values for cache hash calculation
+            if all("api_provider" in request or "url" in request for request in request_list):
+                # Since all request already have either api_provider or url, we can ignore self.provider or if url (if set) for cache.
+                # all requests have either one of api_provider or _url then no need for initatied or default values for cache hash calculation
                 # #because they actuallhy wont be used in requests
                 
                     ignore_keys.append("api_provider")
-                    ignore_keys.append("base_url")
+                    ignore_keys.append("url")
                
             else:
                 
                 use_default_or_request_api=[]
                 for request in request_list:
                     key_list = list(request.keys())
-                    if "api_provider" in key_list or "base_url" in key_list:
+                    if "api_provider" in key_list or "url" in key_list:
                        
                         #Use another provider than default or in llm init
                         use_default_or_request_api.append(False) 
@@ -761,35 +764,35 @@ class AsyncLLM:
                             api_key = request_list[i]['api_key']
                         
                         if api_key!="":
-                            base_url = self.get_request_url()
+                            url = self.get_request_url()
                         else:
-                            base_url,api_key = self.get_requesturl_apikey()
+                            url,api_key = self.get_requesturl_apikey()
                         
                         api_provider = self.api_provider
                         request_list[i]['api_provider'] = api_provider
-                        request_list[i]['base_url'] = base_url
+                        request_list[i]['url'] = url
                         request_list[i]['api_key'] = api_key
             
             #to skip records, already processed
             skip=True
             for i in range(len(request_list)):
                     api_provider=""
-                    base_url=""
+                    url=""
                     api_key=""
                     keys_list=list(request_list[i].keys())
                     #check if any field is missing
-                    if "api_provider" not in keys_list or "api_key" not in keys_list or "base_url" not in keys_list:
+                    if "api_provider" not in keys_list or "api_key" not in keys_list or "rl" not in keys_list:
                         skip=False
                         if "api_provider" in keys_list:
                             api_provider=request_list[i]['api_provider']
-                        if "base_url" in keys_list:
-                            base_url=request_list[i]['base_url']
+                        if "url" in keys_list:
+                            url=request_list[i]['url']
                         #get the base url
-                        base_url, api_provider = self.get_requesturl_apikey_list(base_url,api_provider)
+                        url, api_provider = self.get_requesturl_apikey_list(url,api_provider)
                         
                         #if both not found in request list, may be in initialized init
-                        if base_url=="" and api_provider=="":
-                            base_url,api_key = self.get_requesturl_apikey()
+                        if url=="" and api_provider=="":
+                            url,api_key = self.get_requesturl_apikey()
                             api_provider = self.api_provider
                        #set the api key
                         if "api_key" in keys_list:
@@ -800,8 +803,8 @@ class AsyncLLM:
                         elif api_provider=="ollama":
                             api_key="ollama"
                         else:
-                            for base_url_var, env_var in api_key_dict.items():
-                                if base_url_var in base_url:
+                            for url_var, env_var in api_key_dict.items():
+                                if url_var in url:
                                     api_key  = os.getenv(env_var)
                                     break
                             
@@ -813,11 +816,11 @@ class AsyncLLM:
                         skip=True
                         
                     if not skip:
-                        if api_provider=="" or base_url=="":
+                        if api_provider=="" or url=="":
                             raise("No api provider or base url provided")
                         else:
                             request_list[i]['api_provider'] = api_provider
-                            request_list[i]['base_url'] = base_url
+                            request_list[i]['url'] =url
                             request_list[i]['api_key'] = api_key
                    
 
