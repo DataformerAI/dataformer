@@ -74,6 +74,7 @@ class APIRequest:
         logging.info(f"Starting request #{self.task_id}")
         error = None
         try:
+          
             async with session.post(
                 url=request_url, headers=request_header, json=self.request_json
             ) as response:
@@ -269,7 +270,8 @@ class AsyncLLM:
             raise ValueError("Invalid API Provider")
 
         return self.url
-
+   
+       
     def get_api_key(self):
         if self.api_provider == "ollama":
             return "ollama"
@@ -278,7 +280,9 @@ class AsyncLLM:
         else:
             for url, env_var in api_key_dict.items():
                 if url in self.url:
-                    return os.getenv(env_var)
+                    #send key only if it exists
+                    if os.getenv(env_var):
+                        return os.getenv(env_var)
 
         raise ValueError("Invalid API Key Provided")
 
@@ -286,9 +290,37 @@ class AsyncLLM:
         request_url = self.get_request_url()
         api_key = self.get_api_key()
         return request_url, api_key
+    #Send request url and api provider
+    def get_requesturl_apikey_list(self,url,api_provider):
+        gen_type = self.gen_type
+        if url:
+            if not api_provider:
+                # If api_provider is not set, get it from url_dict
+                for provider, urls in url_dict.items():
+                    if url in urls.values():
+                        api_provider = provider
+                        break
+
+            
+
+            return [url,api_provider]
+
+        if api_provider in url_dict:
+            if isinstance(url_dict[api_provider], dict):
+                if gen_type in url_dict[api_provider]:
+                    url = url_dict[api_provider][gen_type]
+                else:
+                    raise ValueError("Invalid gen_type provided")
+            else:
+                url = url_dict[api_provider]
+        else:
+            raise ValueError("Invalid API Provider")
+
+        return [url,api_provider]
+    
 
     async def process_api_requests(
-        self, request_url: str, api_key: str, request_list: list, cache_filepath: str
+        self, request_url: str, api_key: str, request_list: list, cache_filepath: str,different_requests=False
     ):
         """Processes API requests in parallel, throttling to stay under rate limits."""
 
@@ -300,24 +332,31 @@ class AsyncLLM:
 
         logging.debug(f"Logging initialized at level {self.logging_level}")
 
-        # infer API endpoint and construct request header
-        api_endpoint = self.api_endpoint_from_url(request_url)
-        request_header = {"Authorization": f"Bearer {api_key}"}
-        # use api-key header for Azure deployments
-        if "/deployments" in request_url:
-            request_header = {"api-key": f"{api_key}"}
-        # Use x-api-key for Anthropic
-        if self.api_provider == "anthropic":
-            request_header = {
-                "x-api-key": f"{api_key}",
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            }
-        if self.api_provider == "ollama":
-            request_header = {
-                "Content-Type": "application/json",
-                "api_key": api_key,
-            }
+        if not different_requests:
+                # infer API endpoint and construct request header
+            url = request_url
+            api_endpoint = self.api_endpoint_from_url(request_url)
+            request_header = {"Authorization": f"Bearer {api_key}"}
+            # use api-key header for Azure deployments
+            if "/deployments" in request_url:
+                request_header = {"api-key": f"{api_key}"}
+            # Use x-api-key for Anthropic
+            if self.api_provider == "anthropic":
+                request_header = {
+                    "x-api-key": f"{api_key}",
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json",
+                }
+            if self.api_provider == "ollama":
+                request_header = {
+                    "Content-Type": "application/json",
+                    "api_key": api_key,
+                }
+        else:
+            url = request_list[0]["url"]
+            #first request then set self.max_rps to True if provider is together
+            if request_list[0]["api_provider"]=="together":
+                self.max_rps=True
 
         # initialize trackers
         queue_of_requests_to_retry = asyncio.Queue()
@@ -353,8 +392,8 @@ class AsyncLLM:
         requests = iter(request_list)
         logging.debug("List opened. Entering main loop")
         # Create a TCPConnector with SSL verification disabled for monsterapi
-        connector = aiohttp.TCPConnector(ssl=False) if "monsterapi.ai" in self.url else None
-        async with aiohttp.ClientSession(connector=connector) as session:
+        connector = aiohttp.TCPConnector(ssl=False) if "monsterapi.ai" in url else None
+        async with aiohttp.ClientSession(connector=connector) as session:  # Initialize ClientSession here
             while True:
                 # get next request (if one is not already waiting for capacity)
                 if next_request is None:
@@ -367,6 +406,38 @@ class AsyncLLM:
                         try:
                             # get new request
                             request_json = next(requests)
+                            if different_requests:
+                                    ##infer API endpoint and construct request header
+                                    request_url = request_json["url"]
+                                    api_key = request_json["api_key"]
+                                    api_provider = request_json["api_provider"]
+                                    if api_provider=="together":
+                                        self.max_rps=True
+                                    else:
+                                        self.max_rps=False
+                                        
+                                    api_endpoint = self.api_endpoint_from_url(request_url)
+                                    request_header = {"Authorization": f"Bearer {api_key}"}
+                                    # use api-key header for Azure deployments
+                                    if "/deployments" in request_url:
+                                        request_header = {"api-key": f"{api_key}"}
+                                    # Use x-api-key for Anthropic
+                                    if api_provider == "anthropic":
+                                        request_header = {
+                                            "x-api-key": f"{api_key}",
+                                            "anthropic-version": "2023-06-01",
+                                            "content-type": "application/json",
+                                        }
+                                    if api_provider == "ollama":
+                                        request_header = {
+                                            "Content-Type": "application/json",
+                                            "api_key": api_key,
+                                        }
+                            #delete the extra keys used above
+                            
+                            del request_json["api_key"]
+                            del request_json["url"]
+                            del request_json["api_provider"]
                             active_task_id = next(self.task_id_generator)
                             if active_task_id in self.skip_task_ids:
                                 logging.info(
@@ -601,9 +672,9 @@ class AsyncLLM:
         use_cache=True,
         clear_prev_cache=False,
     ):
-        # Set url before any caching
-        request_url, api_key = self.get_requesturl_apikey()
-
+          
+                       
+        #keys to ignore            
         ignore_keys = [
             "cache_hash",
             "skip_task_ids",
@@ -625,8 +696,133 @@ class AsyncLLM:
             ignore_keys.append("model")
         else:
             for request in request_list:
+                #over ride model based on the api provider or base url in the request list
                 if "model" not in request:
-                    request["model"] = self.model
+                    model=self.model
+                    api_provider=""
+                    url=""
+                    if "url" in list(request.keys()) or "api_provider" in list(request.keys()):
+                        if "api_provider" in list(request.keys()):
+                            api_provider=request['api_provider']
+                        if "url" in list(request.keys()):
+                            url=request['url']
+                        url = self.get_requesturl_apikey_list(url,api_provider)[0]
+                        
+                        model = model_dict.get(url)
+                    
+                    request["model"] = model
+                    
+
+
+        request_url=""
+        api_key=""
+        different_apis=False
+        #check if any provider or base url present in request list
+        if any("api_provider" in request or "url" in request for request in request_list):
+                different_apis = True
+        
+        #If no urls or api providers in request means use default in init
+        if not different_apis:
+            request_url = self.get_request_url()
+            for requests in request_list:
+                requests['api_provider'] = self.api_provider
+                requests['url'] = request_url
+                api_key=""
+                if "api_key" in list(requests.keys()):
+                    api_key=requests['api_key']
+                else:
+                    api_key = self.get_api_key()
+                requests['api_key'] = api_key
+        else:
+            if all("api_provider" in request or "url" in request for request in request_list):
+                # Since all request already have either api_provider or url, we can ignore self.provider or if url (if set) for cache.
+                # all requests have either one of api_provider or _url then no need for initatied or default values for cache hash calculation
+                # #because they actuallhy wont be used in requests
+                
+                    ignore_keys.append("api_provider")
+                    ignore_keys.append("url")
+               
+            else:
+                
+                use_default_or_request_api=[]
+                for request in request_list:
+                    key_list = list(request.keys())
+                    if "api_provider" in key_list or "url" in key_list:
+                       
+                        #Use another provider than default or in llm init
+                        use_default_or_request_api.append(False) 
+                    else:
+                        #Use same provider as default or in llm init
+                        use_default_or_request_api.append(True)
+
+        
+                #if default init is used, check if api key given in request list instead of init
+                for i in range(len(request_list)):
+                    api_key=""
+                    if use_default_or_request_api[i]:
+                        if "api_key" in list(request_list[i].keys()):
+                            api_key = request_list[i]['api_key']
+                        
+                        if api_key!="":
+                            url = self.get_request_url()
+                        else:
+                            url,api_key = self.get_requesturl_apikey()
+                        
+                        api_provider = self.api_provider
+                        request_list[i]['api_provider'] = api_provider
+                        request_list[i]['url'] = url
+                        request_list[i]['api_key'] = api_key
+            
+            #to skip records, already processed
+            skip=True
+            for i in range(len(request_list)):
+                    api_provider=""
+                    url=""
+                    api_key=""
+                    keys_list=list(request_list[i].keys())
+                    #check if any field is missing
+                    if "api_provider" not in keys_list or "api_key" not in keys_list or "rl" not in keys_list:
+                        skip=False
+                        if "api_provider" in keys_list:
+                            api_provider=request_list[i]['api_provider']
+                        if "url" in keys_list:
+                            url=request_list[i]['url']
+                        #get the base url
+                        url, api_provider = self.get_requesturl_apikey_list(url,api_provider)
+                        
+                        #if both not found in request list, may be in initialized init
+                        if url=="" and api_provider=="":
+                            url,api_key = self.get_requesturl_apikey()
+                            api_provider = self.api_provider
+                       #set the api key
+                        if "api_key" in keys_list:
+                            #Use another provider than default or in llm init
+                            api_key= request_list[i]['api_key']
+                        elif self.api_key:
+                            api_key=self.api_key
+                        elif api_provider=="ollama":
+                            api_key="ollama"
+                        else:
+                            for url_var, env_var in api_key_dict.items():
+                                if url_var in url:
+                                    api_key  = os.getenv(env_var)
+                                    break
+                            
+
+                        
+                        if api_key=="" or api_key==None:
+                            raise("Api key not provided or INVALID. Provide appropriate API key with api provider or baseurl.")
+                    else:
+                        skip=True
+                        
+                    if not skip:
+                        if api_provider=="" or url=="":
+                            raise("No api provider or base url provided")
+                        else:
+                            request_list[i]['api_provider'] = api_provider
+                            request_list[i]['url'] =url
+                            request_list[i]['api_key'] = api_key
+                   
 
         for request in request_list:
             for key, value in self.sampling_params.items():
@@ -647,6 +843,7 @@ class AsyncLLM:
             ignore_keys=ignore_keys,
             additional_data=cache_vars,
         )
+       
         # We create cache_hash to sort the async responses even when use_cache is False.
         self.cache_hash = create_hash(cache_vars)
 
@@ -673,15 +870,29 @@ class AsyncLLM:
                 self.skip_task_ids = cached_indices
         else:
             cache_filepath = None
-
-        asyncio.run(
-            self.process_api_requests(
-                request_url,
-                api_key,
-                request_list=request_list,
-                cache_filepath=cache_filepath,
+        
+        if different_apis:
+            #for different api providers
+            asyncio.run(
+                self.process_api_requests(
+                    request_url,
+                    api_key="",
+                    request_list=request_list,
+                    cache_filepath=cache_filepath,
+                    different_requests=True
+                )
             )
-        )
+        else:
+             #for same api provider
+             asyncio.run(
+                self.process_api_requests(
+                    request_url,
+                    api_key,
+                    request_list=request_list,
+                    cache_filepath=cache_filepath,
+                    different_requests=False
+                )
+            )           
 
         sorted_response_list = sorted(
             self.response_list, key=lambda x: x[0][self.cache_hash]
