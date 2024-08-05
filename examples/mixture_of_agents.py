@@ -1,9 +1,12 @@
 from dataformer.llms import AsyncLLM
 
+deepinfra_api_key=""
+openai_api_key=""
+
 #Define the reference models
 reference_models_providers = {
-    "mistralai/Mixtral-8x22B-Instruct-v0.1":["deepinfra","replace with your api key"],
-    "gpt-4o":["openai","replace with your api key"]
+    "mistralai/Mixtral-8x22B-Instruct-v0.1":["deepinfra",deepinfra_api_key],
+    "gpt-4o":["openai",openai_api_key]
     # Add more reference models here if needed
 }
 
@@ -65,7 +68,7 @@ print(final_request_list)
 api_provider="deepinfra"
 
 #Define the aggregator llm
-aggregator_llm = AsyncLLM(api_provider=api_provider, model=aggregator_model)
+aggregator_llm = AsyncLLM(api_provider=api_provider, model=aggregator_model, api_key=deepinfra_api_key)
 
 #Collect responses from the reference llms
 reference_models_response_list = llm.generate(final_request_list)
