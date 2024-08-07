@@ -32,7 +32,38 @@ git clone https://github.com/DataformerAI/dataformer.git
 cd dataformer
 pip install .
 ```
+## Quick Start
 
+AsyncLLM supports various API providers, including:
+- OpenAI
+- Groq
+- Together
+- Anyscale
+- DeepInfra
+- OpenRouter
+
+Choose the provider that best suits your needs!
+
+Here's a quick example of how to use Dataformer's AsyncLLM for efficient asynchronous generation:
+```python
+from dataformer.llms import AsyncLLM
+from dataformer.utils import get_request_list, get_messages
+from datasets import load_dataset
+
+# Load a sample dataset
+dataset = load_dataset("dataformer/self-knowledge", split="train").select(range(3))
+instructions = [example["question"] for example in dataset]
+
+# Prepare the request list
+sampling_params = {"temperature": 0.7}
+request_list = get_request_list(instructions, sampling_params)
+
+# Initialize AsyncLLM with your preferred API provider
+llm = AsyncLLM(api_provider="groq", model="llama-3.1-8b-instant")
+
+# Generate responses asynchronously
+response_list = get_messages(llm.generate(request_list))
+```
 ## Join Community
 
 [Join Dataformer on Discord](https://dataformer.ai/discord)
