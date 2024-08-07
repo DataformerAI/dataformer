@@ -19,6 +19,19 @@
   </a>
 </p>
 
+## Why Dataformer?
+
+Dataformer empowers engineers with a robust framework for creating high-quality synthetic datasets for AI, offering speed, reliability, and scalability. Our mission is to supercharge your AI development process by enabling rapid generation of diverse, premium datasets grounded in proven research methodologies. 
+In the world of AI, compute costs are high, and output quality is paramount. Dataformer allows you to **prioritize data excellence**, addressing both these challenges head-on. By crafting top-tier synthetic data, you can invest your precious time in achieving and sustaining **superior standards** for your AI models.
+
+### One API, Multiple Providers
+
+We integrate with **multiple LLM providers** using one unified API and allow you to make parallel async API calls while respecting rate-limits. We offer the option to cache responses from LLM providers, minimizing redundant API calls and directly reducing operational expenses.
+
+### Research-Backed Iteration at Scale
+ 
+Leverage state-of-the-art research papers to generate synthetic data while ensuring **adaptability, scalability, and resilience**. Shift your focus from infrastructure concerns to refining your data and enhancing your models.
+
 ## Installation
 
 Github Source:
@@ -64,6 +77,10 @@ llm = AsyncLLM(api_provider="groq", model="llama-3.1-8b-instant")
 # Generate responses asynchronously
 response_list = get_messages(llm.generate(request_list))
 ```
+## Contribute
+
+We welcome contributions! Check our issues or open a new one to get started.
+
 ## Join Community
 
 [Join Dataformer on Discord](https://dataformer.ai/discord)
