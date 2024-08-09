@@ -18,7 +18,10 @@ Default values are 20 RPM & 10K TPM.
 MAX_REQUESTS_PER_MINUTE=
 MAX_TOKENS_PER_MINUTE=
 ```
-
+Set project name, default is dataformer
+```
+PROJECT_NAME=
+``s`
 ## Chat
 `python examples/chat.py`
 

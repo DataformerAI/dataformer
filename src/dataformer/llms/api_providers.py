@@ -1,12 +1,19 @@
 model_dict = {
     "https://api.openai.com/v1/chat/completions": "gpt-3.5-turbo",
-    "https://api.groq.com/openai/v1/chat/completions": "mixtral-8x7b-32768",
+    "https://api.openai.com/v1/completions": "gpt-3.5-turbo",
+    "https://api.groq.com/openai/v1/chat/completions": "mixtral-8x7b-32768",    
     "https://llm.monsterapi.ai/v1/chat/completions": "google/gemma-2-9b-it",
-    "https://api.together.xyz/v1/chat/completions": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+    "https://llm.monsterapi.ai/v1/completions": "google/gemma-2-9b-it",
+    "https://api.together.xyz/v1/chat/completions": "meta-llama/Meta-Llama-3-8B-Instruct-Lite",
+    "https://api.together.xyz/v1/completions": "mistralai/Mixtral-8x7B-Instruct-v0.1",
     "https://api.endpoints.anyscale.com/v1/chat/completions": "mistralai/Mistral-7B-Instruct-v0.1",
-    "https://api.deepinfra.com/v1/openai/chat/completions": "meta-llama/Meta-Llama-3-8B-Instruct",
+    "https://api.endpoints.anyscale.com/v1/completions": "mistralai/Mistral-7B-Instruct-v0.1",
+    "https://api.deepinfra.com/v1/openai/chat/completions": "mistralai/Mistral-7B-Instruct-v0.3",
+    "https://api.deepinfra.com/v1/openai/completions": "mistralai/Mistral-7B-Instruct-v0.1",
     "https://openrouter.ai/api/v1/chat/completions": "openai/gpt-3.5-turbo",
+    "https://openrouter.ai/api/v1/completions": "openai/gpt-3.5-turbo",
     "https://api.anthropic.com/v1/messages": "claude-3-5-sonnet-20240620",
+    
 }
 
 url_dict = {

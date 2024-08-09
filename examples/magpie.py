@@ -2,7 +2,9 @@ import json
 
 from dataformer.components import MAGPIE
 from dataformer.llms import AsyncLLM
-
+from dotenv import load_dotenv
+# Load environment variables from .env file
+load_dotenv()
 # Ollama - openai compatible endpoint
 # Template - https://jarvislabs.ai/templates/ollama
 # Once you create an instance, click on API - to get Endpoint URL & Deploy as such: https://jarvislabs.ai/blogs/ollama_deploy (ollama pull llama3)

@@ -1,6 +1,9 @@
 from dataformer.llms import AsyncLLM
+from dotenv import load_dotenv
+# Load environment variables from .env file
+load_dotenv()
 
-llm = AsyncLLM(url="https://api.deepinfra.com/v1/openai/embeddings", model="thenlper/gte-large") # api_key="<your-api-key-here>"
+llm = AsyncLLM(url="https://api.deepinfra.com/v1/openai/embeddings", model="thenlper/gte-large")
 
 instruction = "hey" 
 data_dict = {

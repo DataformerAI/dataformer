@@ -22,7 +22,7 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-    "pydantic >= 2.0", "tiktoken"
+    "pydantic >= 2.0", "tiktoken", "aiohttp", "python-dotenv", "pytest"
 ]
 dynamic = ["version"]
 
