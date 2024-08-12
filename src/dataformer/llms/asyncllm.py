@@ -5,7 +5,7 @@ import logging  # for logging rate limit warnings and other messages
 import os  # for reading API key
 import re  # for matching endpoint from request URL
 import time  # for sleeping after rate limit is hit
-import numpy as np #for cache hash calculation
+
 # for storing API inputs, outputs, and metadata
 import typing
 from dataclasses import (
