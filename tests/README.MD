@@ -5,21 +5,26 @@ The folder contains **test files created on combinations of different parameters
 To Run all the tests together, run the following commands:
 
 1. Go to the test folder
+```
 > cd tests
+```
 
 2. Run all the tests with the following command
+```
 > pytest
+```
 
 To Run tests individually, call the function in each file and run individual files by following commands.
-
+```
 > cd tests
 > python test_filename.py
-
+```
 or 
+```
 > python tests\test_filename.py
-
+```
 ## test_all_api_providers_in_request_list.py
-- Purpose:This test is created to verify if all supported api_providers work perfectly and ensure smooth working when all requests contain an api provider, model and relevant api_keys. Test if api_provider and api_key are either overriding or assigned properly  with requests_list.
+- Purpose: This test is created to verify if all supported api_providers work perfectly and ensure smooth working when all requests contain an api provider, model and relevant api_keys. Test if api_provider and api_key are either overriding or assigned properly  with requests_list.
 
 
 ## test_cache_vars.py
@@ -56,13 +61,13 @@ or
 - Purpose: This test is created  to verify the smooth working of Ollama provider.
 
 ## test_quality_scorer.py
-- Purpose: This test is created to validate the quality scorer component. This test ensures that the quality scorer works perfectly by scoring the quality of responses based on given instructions and responses.
+- Purpose: This test is created to validate the `quality scorer` component. This test ensures that the quality scorer works perfectly by scoring the quality of responses based on given instructions and responses.
 
 ## test_sampling_params.py
 - Purpose: This test is created to check if all the sampling parameters work perfectly.
 
 ## test_task_id_generator.py
-- Purpose: This test is created to check if the task_id_generator_function passed externally works perfectly.
+- Purpose: This test is created to check if the `task_id_generator_function` passed externally works perfectly.
 
 ## test_various_limits_request_list_formation.py
 - Purpose: This test is created to ensure that various limits on requests are applied and to verify if the `get_request_details` function creates appropriate requests.
