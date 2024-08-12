@@ -1,13 +1,13 @@
 # Test Files Description
 
-The folder contains test files created on combinations of different parameters and methods.
+The folder contains **test files created on combinations of different parameters and methods**.
 
 To Run all the tests together, run the following commands:
 
-Go to the test folder
+1. Go to the test folder
 > cd tests
 
-Run all the tests with the following command
+2. Run all the tests with the following command
 > pytest
 
 To Run tests individually, call the function in each file and run individual files by following commands.
@@ -22,7 +22,7 @@ or
 - Purpose:This test is created to verify if all supported api_providers work perfectly and ensure smooth working when all requests contain an api provider, model and relevant api_keys. Test if api_provider and api_key are either overriding or assigned properly  with requests_list.
 
 
-##test_cache_vars.py
+## test_cache_vars.py
 - Purpose: This test is created to check if additional cache vars are taken into consideration for caching.
 
 ## test_caching_requests.py:
