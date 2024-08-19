@@ -22,6 +22,7 @@ from dataformer.utils.cache import (
     get_cache_vars,
     get_request_details,
     task_id_generator_function,
+    delete_cache
 )
 from dataformer.utils.notebook import in_notebook
 
@@ -50,6 +51,8 @@ class APIRequest:
     """Stores an API request's inputs, outputs, and other metadata. Contains a method to make an API call."""
 
     task_id: int
+    recent_task_id:int
+    difference_task_id:int
     request_json: dict
     token_consumption: int
     attempts_left: int
@@ -63,6 +66,8 @@ class APIRequest:
         request_header: dict,
         retry_queue: asyncio.Queue,
         cache_filepath: str,
+        association_filepath:str,
+        project_name:str,
         status_tracker: StatusTracker,
         asyncllm_instance,
     ):
@@ -122,18 +127,52 @@ class APIRequest:
                     json_string = json.dumps(data)
                     with open(cache_filepath, "a") as f:
                         f.write(json_string + "\n")
-
+                
+                if association_filepath is not None:
+                    self.update_association_file(association_filepath,cache_filepath,project_name)
             status_tracker.num_tasks_in_progress -= 1
             status_tracker.num_tasks_succeeded += 1
 
     def create_data(self, asyncllm_instance, response):
         data = [
-            {asyncllm_instance.cache_hash: self.task_id},
+            {asyncllm_instance.cache_hash[self.task_id-self.recent_task_id-self.difference_task_id]: self.task_id-self.recent_task_id-self.difference_task_id},
             self.request_json,
             response,
         ] + ([self.metadata] if self.metadata else [])
         return data
-
+        
+    def update_association_file(self,association_filepath,cache_filepath,project_name):
+        with open(association_filepath,"r") as f:
+            data = json.load(f)
+        hash_data=[]
+        #Iterate data and get hash
+        if os.path.exists(cache_filepath):
+            with open(cache_filepath,"r") as f:
+                file = f.readlines()
+                for row in file:
+                    row = json.loads(row)
+                    hash_data.append(list(row[0].keys())[0])
+            
+            filename = os.path.basename(cache_filepath).split(".")[0]
+            dict_data_projects={}
+            with open(association_filepath,"r") as file:
+                json_data = json.load(file)
+                dict_data_projects['project_requests'] = json_data['project_requests']
+                #check if project name exists and append r create new association
+                if project_name in list(json_data["project_requests"].keys()):
+                    if filename not in dict_data_projects['project_requests'][project_name]:
+                        dict_data_projects['project_requests'][project_name].append(filename)
+                else:
+                    dict_data_projects['project_requests'][project_name]=[filename]
+               
+            data[filename]= hash_data
+            if "project_requests" in list(dict_data_projects.keys()):
+                data["project_requests"] = dict_data_projects['project_requests']
+            else:
+                raise("Association file has incorrect associations.")
+            with open(association_filepath,"w") as f:
+                json.dump(data,f)
+    
     def convert_response(self, request_url, response):
         ollama_keys = ("ollama", "11434", "api/chat", "api/generate")
         if request_url.endswith("completions"):
@@ -197,7 +236,7 @@ class AsyncLLM:
         api_provider="openai",
         model="",
         api_key=None,
-        url="",
+        url="",        
         sampling_params={},
         max_requests_per_minute=None,
         max_tokens_per_minute=None,
@@ -207,7 +246,8 @@ class AsyncLLM:
         token_encoding_name="cl100k_base",
         logging_level=logging.INFO,
         gen_type="chat",
-        cache_dir=".cache/dataformer",
+        project_name=None,
+        cache_dir=".cache/dataformer"
     ):
         self.api_key = api_key
         self.url = url
@@ -215,12 +255,18 @@ class AsyncLLM:
         self.max_requests_per_minute = max_requests_per_minute or os.getenv(
             "MAX_REQUESTS_PER_MINUTE", 60
         )
+        self.max_requests_per_minute = int(self.max_requests_per_minute)
+        
         self.max_tokens_per_minute = max_tokens_per_minute or os.getenv(
             "MAX_TOKENS_PER_MINUTE", 10000000000
         )
+        self.max_tokens_per_minute = int(self.max_tokens_per_minute)
         self.max_concurrent_requests = max_concurrent_requests or os.getenv(
             "MAX_TOKENS_PER_MINUTE"
         )
+        if self.max_concurrent_requests:
+            self.max_concurrent_requests = int(self.max_concurrent_requests)
+
         self.max_rps = max_rps
         self.max_attempts = max_attempts
         self.token_encoding_name = token_encoding_name
@@ -230,6 +276,12 @@ class AsyncLLM:
         self.cache_dir = cache_dir
         self.sampling_params = sampling_params
         self.task_id_generator = None
+        self.project_name = project_name or os.getenv(
+            "PROJECT_NAME"
+        )
+        if self.project_name=="" or self.project_name is None:
+            self.project_name= "dataformer"
+        self.project_name=self.project_name.lower()
         # initialize logging
         logging.basicConfig(level=self.logging_level, force=True)
 
@@ -320,7 +372,7 @@ class AsyncLLM:
     
 
     async def process_api_requests(
-        self, request_url: str, api_key: str, request_list: list, cache_filepath: str,different_requests=False
+        self, request_url: str, api_key: str, request_list: list, cache_filepath: str, association_filepath:str,project_name:str, different_requests=False
     ):
         """Processes API requests in parallel, throttling to stay under rate limits."""
 
@@ -357,10 +409,14 @@ class AsyncLLM:
             #first request then set self.max_rps to True if provider is together
             if request_list[0]["api_provider"]=="together":
                 self.max_rps=True
-
+        first_request=True
+        second_request=False
+        task_id_recent=0
+        value_iterate=1
+        difference_task_id=0
         # initialize trackers
         queue_of_requests_to_retry = asyncio.Queue()
-        if not self.task_id_generator:
+        if self.task_id_generator is None:
             self.task_id_generator = (
                 task_id_generator_function()
             )  # generates integer IDs of 0, 1, 2, ...
@@ -406,6 +462,7 @@ class AsyncLLM:
                         try:
                             # get new request
                             request_json = next(requests)
+                            
                             if different_requests:
                                     ##infer API endpoint and construct request header
                                     request_url = request_json["url"]
@@ -434,18 +491,33 @@ class AsyncLLM:
                                             "api_key": api_key,
                                         }
                             #delete the extra keys used above
-                            
                             del request_json["api_key"]
                             del request_json["url"]
                             del request_json["api_provider"]
                             active_task_id = next(self.task_id_generator)
+                            if second_request:
+                                #when iterating and task ids are not in series like 1,2,3 more difference like 3,6 and so on  
+                                difference_task_id =  active_task_id- task_id_recent-value_iterate
+                                value_iterate+=1
+                                
+
+                            if first_request:
+                                #When sae object bt llm.generate is called again remeber the last id for indexing in create data
+                                task_id_recent = active_task_id
+                                first_request=False
+                                second_request=True
+                            # else:
+
+                            #     task_id_recent=active_task_id-task_id_recent
                             if active_task_id in self.skip_task_ids:
                                 logging.info(
                                     f"[Cache Used] Skip request  {str(active_task_id)}"
-                                )
+                                )                                
                                 continue
                             next_request = APIRequest(
                                 task_id=active_task_id,
+                                recent_task_id = task_id_recent,
+                                difference_task_id= difference_task_id,
                                 request_json=request_json,
                                 token_consumption=self.num_tokens_consumed_from_request(
                                     request_json, api_endpoint, self.token_encoding_name
@@ -504,6 +576,8 @@ class AsyncLLM:
                                     request_header,
                                     queue_of_requests_to_retry,
                                     cache_filepath,
+                                    association_filepath,
+                                    project_name,
                                     status_tracker,
                                 )
                             )
@@ -520,6 +594,8 @@ class AsyncLLM:
                                     request_header=request_header,
                                     retry_queue=queue_of_requests_to_retry,
                                     cache_filepath=cache_filepath,
+                                    association_filepath= association_filepath,
+                                    project_name=project_name,
                                     status_tracker=status_tracker,
                                     asyncllm_instance=self,
                                 )
@@ -651,6 +727,8 @@ class AsyncLLM:
         request_header: dict,
         retry_queue: asyncio.Queue,
         cache_filepath: str,
+        association_filepath:str,
+        project_name:str,
         status_tracker: StatusTracker,
     ):
         async with semaphore:
@@ -660,9 +738,68 @@ class AsyncLLM:
                 request_header=request_header,
                 retry_queue=retry_queue,
                 cache_filepath=cache_filepath,
+                association_filepath=association_filepath,
+                project_name=project_name,
                 status_tracker=status_tracker,
                 asyncllm_instance=self,
             )
+
+    #create associaton file for first time or if file is deleted
+    def create_association_file(self,first=False):
+        content={}
+        #create association file path
+        if os.path.exists(self.cache_dir):
+            associatation_filepath = self.cache_dir+"/association.jsonl"
+        #first time association file is created with project and requests.jsonl file associations
+        if first:
+            content['project_requests']={self.project_name: ["request_1"]}
+            with open(associatation_filepath, "a") as f:
+                json.dump(content,f)
+                f.write("\n")
+            return
+        #Get the association
+        dict_pro={}
+        if os.path.exists(associatation_filepath):
+            with open(associatation_filepath) as f:
+                json_data = json.load(f)
+                if "project_requests" in list(json_data.keys()):
+                        dict_pro["project_requests"] = json_data["project_requests"]
+            os.remove(associatation_filepath)
+        
+        if os.path.exists(self.cache_dir):
+            files=os.listdir(self.cache_dir)
+            for file in files:
+                with open(os.path.join(self.cache_dir, file),"r") as f:
+                    data=f.readlines()
+                hash_array = []
+                for row in data:
+                    row=json.loads(row)
+                    if row:
+                        hash_array.append(list(row[0].keys())[0])
+                if len(hash_array)!=0:
+                            content[file.split(".")[0]] = hash_array
+                else:
+                        print("No data found")
+        else:
+            raise("Cache file path not proper")
+        
+        if len(content)!=0:
+            request_name_list  = list(content.keys())
+            
+            if len(dict_pro)!=0:
+                content["project_requests"]=dict_pro["project_requests"]
+            else:
+                #If association file deleted and no informartion abut project all requests assinged to default dataformer project
+                content["project_requests"]={"dataformer":request_name_list}
+            
+            with open(associatation_filepath, "a") as f:
+                json.dump(content,f)
+                f.write("\n")
+        else:
+            raise("All request cache files empty")
+   
+            
+    
 
     def generate(
         self,
@@ -670,10 +807,22 @@ class AsyncLLM:
         cache_vars: typing.Dict = {},
         task_id_generator=None,
         use_cache=True,
-        clear_prev_cache=False,
+        project_name=None,
+        clear_project_cache=typing.Union[str, typing.List[str]] ,
     ):
-          
-                       
+        if project_name:
+            project_name = project_name.lower()
+        if isinstance(clear_project_cache,str):
+            if clear_project_cache=="full":
+                delete_cache(project_or_full="full",dir_path=self.cache_dir)
+            else:
+                delete_cache(project_or_full=clear_project_cache.lower(),dir_path=self.cache_dir)
+        
+        elif isinstance(clear_project_cache,list):
+            for project in clear_project_cache:
+                #Delete the files of reqestive projects in case of list of projects
+                delete_cache(project_or_full=project.lower(),dir_path=self.cache_dir)  
+
         #keys to ignore            
         ignore_keys = [
             "cache_hash",
@@ -690,11 +839,15 @@ class AsyncLLM:
             "sampling_params" # Already part of request_list
         ]
 
+        #override the project name
+        if project_name is not None:
+            self.project_name = project_name
+                
         # Check if 'model' is present in all request items
-        if all("model" in request for request in request_list):
+        if not all("model" in request for request in request_list):
             # Since all request already have model, we can ignore self.model for cache.
-            ignore_keys.append("model")
-        else:
+            # ignore_keys.append("model")
+        # else:
             for request in request_list:
                 #over ride model based on the api provider or base url in the request list
                 if "model" not in request:
@@ -717,6 +870,7 @@ class AsyncLLM:
         request_url=""
         api_key=""
         different_apis=False
+
         #check if any provider or base url present in request list
         if any("api_provider" in request or "url" in request for request in request_list):
                 different_apis = True
@@ -831,45 +985,101 @@ class AsyncLLM:
 
         if task_id_generator:
             self.task_id_generator = task_id_generator
-
+        else:
+            #Incase if llm.enerate called multiple times on same object
+            self.task_id_generator = None
         self.response_list = []
 
         # If cache, add cached responses to self.response_list
-        if "request_details" not in cache_vars:
-            self.request_details = get_request_details(request_list)
-
-        cache_vars = get_cache_vars(
-            self,
-            ignore_keys=ignore_keys,
-            additional_data=cache_vars,
-        )
+        # if "request_details" not in cache_vars:
+            # self.request_details = get_request_details(request_list)
        
+        
+        # create cache list
+        new_re_cache = [create_hash(get_cache_vars(re.copy(), ignore_keys=ignore_keys, additional_data=cache_vars,vars_use=False)) for re in request_list]
+        if self.gen_type=="text":
+                    for i in request_list:
+                        if i["api_provider"]=="groq":
+                            raise ("Groq doesn't support text generation.")
         # We create cache_hash to sort the async responses even when use_cache is False.
-        self.cache_hash = create_hash(cache_vars)
+        self.cache_hash = new_re_cache
 
         self.skip_task_ids = []
-
-        cache_filepath = f"{self.cache_dir}/{str(self.cache_hash)}.jsonl"
-
-        if clear_prev_cache and os.path.exists(cache_filepath):
-            os.remove(cache_filepath)
-
+       
+        cache_filepath=None
+        association_filepath=None
         if use_cache:
             if not os.path.exists(self.cache_dir):
                 os.makedirs(self.cache_dir)
+            
+            #check if files exists, to assign names as first request or next request in order
+            files = os.listdir(self.cache_dir)
+           
+            if len(files)==0:
+                filename="request_1"
+            else:                
+                filename= "request_"+ str(int(files[-1].split(".")[0].split("_")[1])+1)
+        
+            #name the cache and association file
+            cache_filepath = f"{self.cache_dir}/{filename}.jsonl"
+            association_filepath =f"{self.cache_dir}/association.jsonl"
+            
+            #create if the association file doesn't exist or is deleted or corrupted
+            if filename!="request_1":
+                #create association file for first time
+                if not os.path.exists(association_filepath):
+                    self.create_association_file()
 
-            if os.path.exists(cache_filepath):
-                with open(cache_filepath, "r") as f:
-                    cached_responses = f.readlines()
-                cached_indices = []
-                for response in cached_responses:
-                    response_json = json.loads(response)
-                    self.response_list.append(response_json)
-                    if self.cache_hash in response_json[0].keys():
-                        cached_indices.append(response_json[0][self.cache_hash])
-                self.skip_task_ids = cached_indices
-        else:
-            cache_filepath = None
+                else:
+                    #corrupted or edited file inaccurately case
+                    with open(association_filepath,"r") as f:
+                        data_json = json.load(f)
+                    keys_files= list(data_json.keys())
+                    files = os.listdir(self.cache_dir)
+                    #Check if all requests hash ids present in association if not possibility of edited file, create new 
+                    if not all(filename in files or "project_requests" for filename in keys_files):
+                        self.create_association_file()
+            
+                
+                if os.path.exists(association_filepath):
+                    #find the overlapping caches and skip them
+                    cached_indices = []
+                    with open(association_filepath,"r") as file:
+                        cache_hash_data = json.load(file)
+                   
+                    values=[]
+                    new_cache_hash_list = self.cache_hash.copy()
+                    
+                    for key in cache_hash_data:
+                        #skip this keywors as it represent project association
+                        if key=="project_requests":
+                            continue
+                        #get the stored hash from file
+                        stored_hash_list = cache_hash_data[key]
+                        
+                        indices=[]
+                        #iterate and check hashes
+                        for i, hashh in enumerate(new_cache_hash_list):
+                            if i not in cached_indices:
+                                if hashh in stored_hash_list:
+                                
+                                    values.append(hashh)                             
+                                    cached_indices.append(i)                                                                
+                                    indices.append(stored_hash_list.index(hashh))
+                        #read data and save response in response_list 
+                        with open(os.path.join(self.cache_dir,key+".jsonl")) as f:
+                            file_data = f.readlines()
+                            #Get the responses
+                            for j in indices:
+                                self.response_list.append(json.loads(file_data[j]))  
+                                      
+                    #cached indices to be skipped
+                    self.skip_task_ids = cached_indices
+                else:
+                    print("Association file doesn't exist")
+            else:
+                self.create_association_file(first=True)
+        
         
         if different_apis:
             #for different api providers
@@ -879,6 +1089,8 @@ class AsyncLLM:
                     api_key="",
                     request_list=request_list,
                     cache_filepath=cache_filepath,
+                    association_filepath=association_filepath,
+                    project_name=self.project_name,
                     different_requests=True
                 )
             )
@@ -890,15 +1102,17 @@ class AsyncLLM:
                     api_key,
                     request_list=request_list,
                     cache_filepath=cache_filepath,
+                    association_filepath=association_filepath,
+                    project_name=self.project_name,
                     different_requests=False
                 )
             )           
-
         sorted_response_list = sorted(
-            self.response_list, key=lambda x: x[0][self.cache_hash]
+            self.response_list, key=lambda x: list(x[0].values())[0]
         )
+        
         sorted_response_list = [
             item[1:] for item in sorted_response_list
         ]  # Exclude self.cache_hash from the list
-
+        
         return sorted_response_list

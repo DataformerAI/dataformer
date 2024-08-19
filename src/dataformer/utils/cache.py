@@ -1,10 +1,13 @@
 import hashlib
 import shutil
 import os
+import json
 
-def get_cache_vars(input, ignore_keys=None, additional_data=None):
-    cache_vars = vars(input)
-
+def get_cache_vars(input, ignore_keys=None, additional_data=None,vars_use=True):
+    if vars_use:
+        cache_vars = vars(input)
+    else:
+        cache_vars=input
     if ignore_keys is None:
         ignore_keys = []
 
@@ -42,10 +45,46 @@ def task_id_generator_function():
         yield task_id
         task_id += 1
         
-def delete_cache(dir_path=".cache/dataformer"):
-    if os.path.exists(dir_path):
-        try:
-            shutil.rmtree(dir_path)
-            print(f"Directory {dir_path} has been deleted successfully.")
-        except Exception as e:
-            print(f"Error: {e}")
+def delete_cache(project_or_full="dataformer",dir_path=".cache/dataformer"):
+    
+    #Delete full cache directory
+    if project_or_full=="full":
+        if os.path.exists(dir_path):
+            try:
+                shutil.rmtree(dir_path)
+                print(f"Directory {dir_path} has been deleted successfully.")
+            except Exception as e:
+                print(f"Error: {e}")
+    else:
+        #Delete specfic project files mentioned
+        with open(os.path.join(dir_path,"association.jsonl"),"r") as file:
+            data = json.load(file)
+        
+        #Search for project if exists delete all request_ .jsonl files belonging to project
+        print(list(data['project_requests'].keys()),project_or_full)
+        if project_or_full in list(data['project_requests'].keys()):
+            for request_name in data["project_requests"][project_or_full]:
+                path = os.path.join(dir_path,request_name+".jsonl")
+                print(path)
+                if os.path.exists(path):
+                    try:
+                        os.remove(path)
+                        print(f"File {path} has been deleted successfully.")
+                        
+                        #Change in association.jsonl file
+                        association_path = os.path.join(dir_path,"association.jsonl")
+                        with open(association_path,"r") as file:
+                            data=json.load(file)
+                        
+                        for i in data['project_requests'][project_or_full]:
+                            del data[i]
+                        del data['project_requests'][project_or_full]
+                        if len(data['project_requests'])==0:
+                            os.remove(association_path)
+                        else:
+                            with open(association_path,"w") as file:
+                                json.dump(data,file)
+                    except Exception as e:
+                        print(f"Error: {e}")
+        else:
+            raise("Inappropriate argument value provided")
