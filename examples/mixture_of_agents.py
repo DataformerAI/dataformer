@@ -145,4 +145,3 @@ for request, response in zip(request_list, response_list_aggregator):
     prompt = request["messages"][0]["content"]
     answer = response[1]["choices"][0]["message"]["content"]
     print(f"{COLOR['BLUE']}Prompt: {prompt}{COLOR['ENDC']}\n{COLOR['GREEN']}Answer:\n {answer}{COLOR['ENDC']}\n")
-
