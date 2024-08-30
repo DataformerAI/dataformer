@@ -16,8 +16,8 @@ openai_api_key=""
 
 #Define the reference models, their providers and keys, these llms act as models or llms of layer 1
 reference_models_providers = {
-    "mistralai/Mixtral-8x22B-Instruct-v0":["deepinfra",deepinfra_api_key],
-    "gpt-4":["openai",openai_api_key]
+    "mistralai/Mixtral-8x22B-Instruct-v0.1":["deepinfra",deepinfra_api_key],
+    "gpt-4o":["openai",openai_api_key]
     # Add more reference models here if needed
 }
 
