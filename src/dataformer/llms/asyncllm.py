@@ -5,6 +5,7 @@ import logging  # for logging rate limit warnings and other messages
 import os  # for reading API key
 import re  # for matching endpoint from request URL
 import time  # for sleeping after rate limit is hit
+import subprocess # for checking if the provided model really exists
 
 # for storing API inputs, outputs, and metadata
 import typing
@@ -169,7 +170,7 @@ class APIRequest:
             if "project_requests" in list(dict_data_projects.keys()):
                 data["project_requests"] = dict_data_projects['project_requests']
             else:
-                raise("Association file has incorrect associations.")
+                raise ValueError("Association file has incorrect associations.")
             with open(association_filepath,"w") as f:
                 json.dump(data,f)
     
@@ -289,13 +290,74 @@ class AsyncLLM:
             self.model = model
         elif self.url or self.api_provider:
             self.url = self.url or self.get_request_url()
+            print(self.url)
             self.model = model_dict.get(self.url)
         else:
             raise ValueError("Model not provided.")
-
+        print(self.url,self.api_provider,self.api_key)
+        if self.url=="":
+            self.url = self.get_request_url()
+        self.check_model_exists(self.url,self.api_provider,self.api_key,self.model)
         if self.api_provider == "together":
             self.max_rps = True
 
+    def check_model_exists(self,api_url,api_provider,api_key,model):
+        # check if the url and api_key exists
+        # check if the api_key and model exists
+        if api_key=="" or not api_key:
+            api_key=self.get_api_key()
+            if not api_key and not model:
+                raise ValueError("API key not provided")
+        # assign the api provider and url
+        if api_provider=="" or not api_provider:
+            for provider, urls in url_dict.items():
+                    if api_url in urls.values():
+                        api_provider = provider
+                        break
+            if api_provider=="" or not api_provider:
+                raise ValueError("No api provider found")
+        # if api_provider api_url and model given go ahead
+        if (api_provider or api_url) and model:
+            
+            #Get the url for making request to find out the models supported by the api 
+            if isinstance(url_dict[api_provider], dict):
+                    if "models" in url_dict[api_provider]:
+                        url = url_dict[api_provider]["models"]
+                    else:
+                        url = url_dict[api_provider]["chat"] #for antropic only
+            else:
+                    url = url_dict[self.api_provider]
+            
+            # Make the GET request to get the models list  
+            # print("Done till here")  
+            curl_request=f'curl -s {url} -H "Authorization: Bearer {api_key}"'  
+            # print(curl_request) 
+            #execute the curl request and load the output in json format
+            _, output = subprocess.getstatusoutput(curl_request)
+            response = json.loads(output)
+            # print("requests done")
+            if "error" in list(response.keys()):
+                raise ValueError("Some error occured. Your provided api key not suported by the platform")
+            
+            # if proper response received go for model checking
+            if 'id' in list(response.keys()) or 'data' in list(response.keys()):
+                # anthropic doesn't have any list models api endpoint,check with message reply or error if any, to see if a amdoel exists or not
+                if api_provider=="anthropic":
+                    if "error" in list(response.keys()):
+                        raise ValueError("Tried to verify the model but received the error from the api provider",response['error']['message'])
+                    print("Model verified successfully")
+                else:
+                    # leaving together api provider all responses have data json list instead of id jsn list
+                    if api_provider!="together":
+                        response = response['data']
+                    print(len(response))
+                    models = [i['id'] for i in response]
+                    #Check if the model exists/supported by the api provider platform
+                    if not model in models:
+                        raise ValueError("Wrong model provided for the api_provider or url. The model doesn't exist on the given api_provider or url.")
+                    print("Model verified successfully")
+            else:
+                raise ValueError("tried to verify the model but received error." ,response)
     def get_request_url(self):
         if self.url:
             if not self.api_provider:
@@ -781,7 +843,7 @@ class AsyncLLM:
                 else:
                         print("No data found")
         else:
-            raise("Cache file path not proper")
+            raise ValueError("Cache file path not proper")
         
         if len(content)!=0:
             request_name_list  = list(content.keys())
@@ -796,7 +858,7 @@ class AsyncLLM:
                 json.dump(content,f)
                 f.write("\n")
         else:
-            raise("All request cache files empty")
+            raise FileNotFoundError("All request cache files empty")
    
             
     
@@ -965,13 +1027,13 @@ class AsyncLLM:
 
                         
                         if api_key=="" or api_key==None:
-                            raise("Api key not provided or INVALID. Provide appropriate API key with api provider or baseurl.")
+                            raise ValueError("Api key not provided or INVALID. Provide appropriate API key with api provider or baseurl.")
                     else:
                         skip=True
                         
                     if not skip:
                         if api_provider=="" or url=="":
-                            raise("No api provider or base url provided")
+                            raise ValueError("No api provider or base url provided")
                         else:
                             request_list[i]['api_provider'] = api_provider
                             request_list[i]['url'] =url
@@ -989,7 +1051,10 @@ class AsyncLLM:
             #Incase if llm.enerate called multiple times on same object
             self.task_id_generator = None
         self.response_list = []
-
+        # check if requests_list have properly assigned model parameter 
+        if different_apis:
+            for request in request_list:
+                self.check_model_exists(request['url'],request['api_provider'],request['api_key'],request['model'])
         # If cache, add cached responses to self.response_list
         # if "request_details" not in cache_vars:
             # self.request_details = get_request_details(request_list)
@@ -1000,7 +1065,7 @@ class AsyncLLM:
         if self.gen_type=="text":
                     for i in request_list:
                         if i["api_provider"]=="groq":
-                            raise ("Groq doesn't support text generation.")
+                            raise ValueError("Groq doesn't support text generation.")
         # We create cache_hash to sort the async responses even when use_cache is False.
         self.cache_hash = new_re_cache
 
@@ -1014,7 +1079,10 @@ class AsyncLLM:
             
             #check if files exists, to assign names as first request or next request in order
             files = os.listdir(self.cache_dir)
-           
+            #If someone deletes all the files except the association file, then delete it 
+            if len(files)==1 and "association.jsonl" in files[0]:
+                os.remove(os.path.join(self.cache_dir,files[0]))
+                files=[]
             if len(files)==0:
                 filename="request_1"
             else:                
