@@ -290,11 +290,9 @@ class AsyncLLM:
             self.model = model
         elif self.url or self.api_provider:
             self.url = self.url or self.get_request_url()
-            print(self.url)
             self.model = model_dict.get(self.url)
         else:
             raise ValueError("Model not provided.")
-        print(self.url,self.api_provider,self.api_key)
         if self.url=="":
             self.url = self.get_request_url()
         self.check_model_exists(self.url,self.api_provider,self.api_key,self.model)
@@ -329,28 +327,55 @@ class AsyncLLM:
                     url = url_dict[self.api_provider]
             
             # Make the GET request to get the models list  
-            # print("Done till here")  
-            curl_request=f'curl -s {url} -H "Authorization: Bearer {api_key}"'  
-            # print(curl_request) 
+            # anthropic doesn't have any list models api endpoint,check with message reply or error if any, to see if a amdoel exists or not
+           
+            if api_provider=="anthropic":
+                data = {
+                    "model": model,
+                    "max_tokens": self.max_tokens_per_minute,
+                    "messages": [
+                        {
+                            "role": "user", 
+                            "content": "Hello, world"
+                            }
+                        ]
+                }
+
+                json_data = json.dumps(data)
+                curl_command = [
+                    "curl", "-s", "-X", "POST", url,
+                    "--header", f"x-api-key: {api_key}",
+                    "--header", "anthropic-version: 2023-06-01",
+                    "--header", "Content-Type: application/json",
+                    "--data", json_data
+                ]
+                
+
+            else:
+                curl_request=f'curl -s {url} -H "Authorization: Bearer {api_key}"'  
+             
             #execute the curl request and load the output in json format
-            _, output = subprocess.getstatusoutput(curl_request)
+
+            if api_provider=="anthropic":
+                try:
+                    output = subprocess.check_output(curl_command, text=True,creationflags=subprocess.CREATE_NO_WINDOW)
+                except Exception:
+                    raise ValueError('Some exception occurred while testing for model support')
+            else:
+                _, output = subprocess.getstatusoutput(curl_request)
             response = json.loads(output)
-            # print("requests done")
+
             if "error" in list(response.keys()):
-                raise ValueError("Some error occured. Your provided api key not suported by the platform")
-            
+                 raise ValueError("Tried to verify the model but received the error from the api provider",response)
+            elif api_provider=="anthropic":
+                print("Model verified successfully")
+                return
+                     
             # if proper response received go for model checking
             if 'id' in list(response.keys()) or 'data' in list(response.keys()):
-                # anthropic doesn't have any list models api endpoint,check with message reply or error if any, to see if a amdoel exists or not
-                if api_provider=="anthropic":
-                    if "error" in list(response.keys()):
-                        raise ValueError("Tried to verify the model but received the error from the api provider",response['error']['message'])
-                    print("Model verified successfully")
-                else:
                     # leaving together api provider all responses have data json list instead of id jsn list
                     if api_provider!="together":
                         response = response['data']
-                    print(len(response))
                     models = [i['id'] for i in response]
                     #Check if the model exists/supported by the api provider platform
                     if not model in models:
@@ -461,6 +486,8 @@ class AsyncLLM:
                     "anthropic-version": "2023-06-01",
                     "content-type": "application/json",
                 }
+                for request in request_list:
+                    request['max_tokens'] = self.max_tokens_per_minute
             if self.api_provider == "ollama":
                 request_header = {
                     "Content-Type": "application/json",
@@ -547,6 +574,7 @@ class AsyncLLM:
                                             "anthropic-version": "2023-06-01",
                                             "content-type": "application/json",
                                         }
+                                        request_json['max_tokens'] = self.max_tokens_per_minute
                                     if api_provider == "ollama":
                                         request_header = {
                                             "Content-Type": "application/json",
