@@ -1,6 +1,6 @@
 model_dict = {
     "https://api.openai.com/v1/chat/completions": "gpt-3.5-turbo",
-    "https://api.openai.com/v1/completions": "gpt-3.5-turbo",
+    "https://api.openai.com/v1/completions": "gpt-3.5-turbo-instruct",
     "https://api.groq.com/openai/v1/chat/completions": "mixtral-8x7b-32768",    
     "https://llm.monsterapi.ai/v1/chat/completions": "google/gemma-2-9b-it",
     "https://llm.monsterapi.ai/v1/completions": "google/gemma-2-9b-it",
@@ -20,33 +20,41 @@ url_dict = {
     "openai": {
         "chat": "https://api.openai.com/v1/chat/completions",
         "text": "https://api.openai.com/v1/completions",
+        "models":"https://api.openai.com/v1/models"
     },
     "groq": {
         "chat": "https://api.groq.com/openai/v1/chat/completions",
         "text": "https://api.groq.com/openai/v1/completions",
+        "models":"https://api.groq.com/openai/v1/models"
     },
     "monsterapi": {
         "chat": "https://llm.monsterapi.ai/v1/chat/completions",
         "text": "https://llm.monsterapi.ai/v1/completions",
+        "models":"https://llm.monsterapi.ai/v1/models"
     },
     "together": {
         "chat": "https://api.together.xyz/v1/chat/completions",
         "text": "https://api.together.xyz/v1/completions",
+        "models":"https://api.together.xyz/v1/models"
     },
     "anyscale": {
         "chat": "https://api.endpoints.anyscale.com/v1/chat/completions",
         "text": "https://api.endpoints.anyscale.com/v1/completions",
+        "models":"https://api.endpoints.anyscale.com/v1/models"
     },
     "deepinfra": {
         "chat": "https://api.deepinfra.com/v1/openai/chat/completions",
         "text": "https://api.deepinfra.com/v1/openai/completions",
+        "models":"https://api.deepinfra.com/v1/openai/models"
     },
     "openrouter": {
         "chat": "https://openrouter.ai/api/v1/chat/completions",
         "text": "https://openrouter.ai/api/v1/completions",
+        "models":"https://api.openrouter.ai/v1/models"
     },
     "anthropic": {
         "chat": "https://api.anthropic.com/v1/messages",
+        
     },
 }
 
