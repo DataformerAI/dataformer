@@ -314,14 +314,16 @@ class AsyncLLM:
                 raise ValueError("API key not provided")
         # assign the api provider and url
         if api_provider=="" or not api_provider:
+    
             for provider, urls in url_dict.items():
-                    if api_url in urls.values():
-                        api_provider = provider
-                        break
+                if api_url in urls.values():
+                    api_provider = provider
+                    break
             if api_provider=="" or not api_provider:
                 raise ValueError("No api provider found")
+        
         # if api_provider api_url and model given go ahead
-        if (api_provider or api_url) and model:
+        if api_provider and model:
             
             #Get the url for making request to find out the models supported by the api 
             if isinstance(url_dict[api_provider], dict):
@@ -355,26 +357,26 @@ class AsyncLLM:
                     "--header", "Content-Type: application/json",
                     "--data", json_data
                 ]
-                
-
+            
             else:
-                curl_request=f'curl -s {url} -H "Authorization: Bearer {api_key}"'  
+                curl_command=f'curl -s {url} -H "Authorization: Bearer {api_key}"'  
              
-            #execute the curl request and load the output in json format
-
-            if api_provider=="anthropic":
-                try:
-                    output = subprocess.check_output(curl_command, text=True,creationflags=subprocess.CREATE_NO_WINDOW)
-                except Exception:
-                    raise ValueError('Some exception occurred while testing for model support')
-            else:
-                _, output = subprocess.getstatusoutput(curl_request)
-            response = json.loads(output)
-
+            #execute the curl request and load the output in json format            
+            try:
+                output = subprocess.check_output(curl_command, text=True,creationflags=subprocess.CREATE_NO_WINDOW,encoding="utf-8")
+            except Exception:
+                raise ValueError('Some exception occurred while testing for model support')
+           
+            try:
+                response = json.loads(output)
+            except Exception:
+                raise ValueError("Tried to verify the model but received the following response from api provider.",output)
+            
             # Convert response to dict if it's a list
             if isinstance(response, list):
                 response = {"data": response}
 
+            
             if "error" in list(response.keys()):
                  raise ValueError("Tried to verify the model but received the error from the api provider",response)
             elif api_provider=="anthropic":
