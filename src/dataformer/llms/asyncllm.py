@@ -1107,6 +1107,7 @@ class AsyncLLM:
             
             #check if files exists, to assign names as first request or next request in order
             files = os.listdir(self.cache_dir)
+            files.sort(key=lambda x: x.split('.')[0])
             #If someone deletes all the files except the association file, then delete it 
             if len(files)==1 and "association.jsonl" in files[0]:
                 os.remove(os.path.join(self.cache_dir,files[0]))
