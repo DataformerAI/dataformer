@@ -300,6 +300,12 @@ class AsyncLLM:
             self.max_rps = True
 
     def check_model_exists(self,api_url,api_provider,api_key,model):
+
+        # Check if the api_url is in the url_dict
+        if not any(api_url in urls.values() for urls in url_dict.values()):
+            print(f"Skipping model verification for URL: {api_url}")
+            return
+        
         # check if the url and api_key exists
         # check if the api_key and model exists
         if api_key=="" or not api_key:
