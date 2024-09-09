@@ -365,6 +365,10 @@ class AsyncLLM:
                 _, output = subprocess.getstatusoutput(curl_request)
             response = json.loads(output)
 
+            # Convert response to dict if it's a list
+            if isinstance(response, list):
+                response = {"data": response}
+
             if "error" in list(response.keys()):
                  raise ValueError("Tried to verify the model but received the error from the api provider",response)
             elif api_provider=="anthropic":
@@ -373,9 +377,7 @@ class AsyncLLM:
                      
             # if proper response received go for model checking
             if 'id' in list(response.keys()) or 'data' in list(response.keys()):
-                    # leaving together api provider all responses have data json list instead of id jsn list
-                    if api_provider!="together":
-                        response = response['data']
+                    response = response['data']
                     models = [i['id'] for i in response]
                     #Check if the model exists/supported by the api provider platform
                     if not model in models:
@@ -383,6 +385,7 @@ class AsyncLLM:
                     print("Model verified successfully")
             else:
                 raise ValueError("tried to verify the model but received error." ,response)
+            
     def get_request_url(self):
         if self.url:
             if not self.api_provider:
