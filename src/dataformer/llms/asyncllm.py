@@ -359,7 +359,13 @@ class AsyncLLM:
                 ]
             
             else:
-                curl_command=f'curl -s {url} -H "Authorization: Bearer {api_key}"'  
+                curl_command = [
+                    "curl",
+                    "-s",
+                    url,
+                    "-H",
+                    f"Authorization: Bearer {api_key}"
+                ]  
             if sys.platform == "win32":
                 CREATE_NO_WINDOW = subprocess.CREATE_NO_WINDOW # For windows platforms
             else:
