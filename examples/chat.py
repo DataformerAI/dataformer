@@ -34,7 +34,6 @@ API Providers
 - openai
 - groq
 - together
-- anyscale
 - deepinfra
 - openrouter
 """

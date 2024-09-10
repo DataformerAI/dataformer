@@ -6,7 +6,7 @@ import os  # for reading API key
 import re  # for matching endpoint from request URL
 import time  # for sleeping after rate limit is hit
 import subprocess # for checking if the provided model really exists
-
+import sys # for checking if the provided model really exists
 # for storing API inputs, outputs, and metadata
 import typing
 from dataclasses import (
@@ -360,10 +360,14 @@ class AsyncLLM:
             
             else:
                 curl_command=f'curl -s {url} -H "Authorization: Bearer {api_key}"'  
-             
+            if sys.platform == "win32":
+                CREATE_NO_WINDOW = subprocess.CREATE_NO_WINDOW # For windows platforms
+            else:
+                CREATE_NO_WINDOW = 0  # For non-Windows platforms
+
             #execute the curl request and load the output in json format            
             try:
-                output = subprocess.check_output(curl_command, text=True,creationflags=subprocess.CREATE_NO_WINDOW,encoding="utf-8")
+                output = subprocess.check_output(curl_command, text=True,creationflags=CREATE_NO_WINDOW,encoding="utf-8")
             except Exception:
                 raise ValueError('Some exception occurred while testing for model support')
            
