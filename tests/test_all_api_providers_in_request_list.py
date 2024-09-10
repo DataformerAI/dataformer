@@ -11,7 +11,7 @@ from dataformer.llms import AsyncLLM
 def test_all_api_providers():
     # Assuming llm.generate returns a response
 
-    api_providers=["openai", "groq", "monsterapi", "together", "deepinfra", "openrouter"] #add anthropic
+    api_providers=["openai", "groq", "monsterapi", "together", "deepinfra", "openrouter","anthropic"]
     many_providers_text=[]
     many_providers_chat=[]
     for i in api_providers:
@@ -24,7 +24,6 @@ def test_all_api_providers():
         if i!="anthropic":
             many_providers_text.append(request_text)
         many_providers_chat.append(request_message)
-        # many_providers_text.append(request_text)
 
     llm=AsyncLLM(gen_type="text")
     response = llm.generate(many_providers_text, project_name="NewProject")
