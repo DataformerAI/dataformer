@@ -11,7 +11,7 @@ from dataformer.llms import AsyncLLM
 def test_all_api_providers():
     # Assuming llm.generate returns a response
 
-    api_providers=["openai", "groq", "monsterapi", "together", "anyscale", "deepinfra", "openrouter"]
+    api_providers=["openai", "groq", "monsterapi", "together", "deepinfra", "openrouter","anthropic"]
     many_providers_text=[]
     many_providers_chat=[]
     for i in api_providers:
@@ -21,8 +21,9 @@ def test_all_api_providers():
         request_message['api_provider'] = i
         if i!="groq":
             request_text['api_provider'] = i
+        if i!="anthropic":
+            many_providers_text.append(request_text)
         many_providers_chat.append(request_message)
-        many_providers_text.append(request_text)
 
     llm=AsyncLLM(gen_type="text")
     response = llm.generate(many_providers_text, project_name="NewProject")
@@ -30,7 +31,7 @@ def test_all_api_providers():
     assert response is not None,"Whole Response is None"
     assert len(response) == len(many_providers_text),"Response and instruction length different"
     assert response[0][1]["choices"][0]["text"] is not None,"Response not containing text result"
-
+   
     llm=AsyncLLM(gen_type="chat")
     response = llm.generate(many_providers_chat, project_name="NewProject")
     # Add assertions to check the proper response

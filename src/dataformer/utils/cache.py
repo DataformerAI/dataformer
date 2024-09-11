@@ -61,7 +61,7 @@ def delete_cache(project_or_full="dataformer",dir_path=".cache/dataformer"):
             data = json.load(file)
         
         #Search for project if exists delete all request_ .jsonl files belonging to project
-        print(list(data['project_requests'].keys()),project_or_full)
+        
         if project_or_full in list(data['project_requests'].keys()):
             for request_name in data["project_requests"][project_or_full]:
                 path = os.path.join(dir_path,request_name+".jsonl")

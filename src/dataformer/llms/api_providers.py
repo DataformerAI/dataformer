@@ -6,8 +6,6 @@ model_dict = {
     "https://llm.monsterapi.ai/v1/completions": "google/gemma-2-9b-it",
     "https://api.together.xyz/v1/chat/completions": "meta-llama/Meta-Llama-3-8B-Instruct-Lite",
     "https://api.together.xyz/v1/completions": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-    "https://api.endpoints.anyscale.com/v1/chat/completions": "mistralai/Mistral-7B-Instruct-v0.1",
-    "https://api.endpoints.anyscale.com/v1/completions": "mistralai/Mistral-7B-Instruct-v0.1",
     "https://api.deepinfra.com/v1/openai/chat/completions": "mistralai/Mistral-7B-Instruct-v0.3",
     "https://api.deepinfra.com/v1/openai/completions": "mistralai/Mistral-7B-Instruct-v0.1",
     "https://openrouter.ai/api/v1/chat/completions": "openai/gpt-3.5-turbo",
@@ -37,11 +35,6 @@ url_dict = {
         "text": "https://api.together.xyz/v1/completions",
         "models":"https://api.together.xyz/v1/models"
     },
-    "anyscale": {
-        "chat": "https://api.endpoints.anyscale.com/v1/chat/completions",
-        "text": "https://api.endpoints.anyscale.com/v1/completions",
-        "models":"https://api.endpoints.anyscale.com/v1/models"
-    },
     "deepinfra": {
         "chat": "https://api.deepinfra.com/v1/openai/chat/completions",
         "text": "https://api.deepinfra.com/v1/openai/completions",
@@ -50,7 +43,7 @@ url_dict = {
     "openrouter": {
         "chat": "https://openrouter.ai/api/v1/chat/completions",
         "text": "https://openrouter.ai/api/v1/completions",
-        "models":"https://api.openrouter.ai/v1/models"
+        "models":"https://openrouter.ai/api/v1/models"
     },
     "anthropic": {
         "chat": "https://api.anthropic.com/v1/messages",
@@ -64,7 +57,6 @@ api_key_dict = {
     "llm.monsterapi.ai": "MONSTER_API_KEY",
     "api.anthropic.com": "ANTHROPIC_API_KEY",
     "api.together.xyz": "TOGETHER_API_KEY",
-    "api.endpoints.anyscale.com": "ANYSCALE_API_KEY",
     "api.deepinfra.com": "DEEPINFRA_API_KEY",
     "openrouter.ai": "OPENROUTER_API_KEY",
 }

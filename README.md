@@ -51,7 +51,6 @@ AsyncLLM supports various API providers, including:
 - OpenAI
 - Groq
 - Together
-- Anyscale
 - DeepInfra
 - OpenRouter
 

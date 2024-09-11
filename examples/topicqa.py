@@ -8,7 +8,7 @@ load_dotenv()
 import os
 
 api_key = os.environ.get("OPENAI_API_KEY") 
-llm = AsyncLLM(api_key, api_provider="openai")
+llm = AsyncLLM(api_key=api_key, api_provider="openai")
 
 
 topics = [
