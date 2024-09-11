@@ -4,6 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dataformer"
+version = "0.0.2"
 description = "Dataformer is an library to create data for LLMs."
 readme = "README.md"
 requires-python = ">=3.8"
@@ -11,7 +12,7 @@ license = { text = "Apache-2.0" }
 keywords = ["llm", "synthetic", "data"]
 authors = [{ name = "Dataformer AI", email = "contact@dataformer.ai" }]
 classifiers = [
-    "Development Status :: 0.0.1",
+    "Development Status :: 0.0.2",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
@@ -24,7 +25,6 @@ classifiers = [
 dependencies = [
     "pydantic >= 2.0", "tiktoken", "aiohttp", "python-dotenv", "pytest"
 ]
-dynamic = ["version"]
 
 [project.optional-dependencies]
 dev = ["ruff == 0.4.5", "pre-commit >= 3.5.0", "black == 24.4.2"]
