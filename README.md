@@ -34,16 +34,21 @@ Leverage state-of-the-art research papers to generate synthetic data while ensur
 
 ## Installation
 
-Github Source:
+PyPi (Stable)
+```
+pip install dataformer
+```
+
+Github Source (Latest):
 ```
 pip install dataformer@git+https://github.com/DataformerAI/dataformer.git 
 ```
 
-Using Git:
+Using Git (Development):
 ```
 git clone https://github.com/DataformerAI/dataformer.git
 cd dataformer
-pip install .
+pip install -e .
 ```
 ## Quick Start
 
