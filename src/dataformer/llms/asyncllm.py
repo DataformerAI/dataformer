@@ -105,6 +105,8 @@ class APIRequest:
 
         if error:
             self.result.append(error)
+            self.attempts_left -= 1
+            logging.info(f"Request ID: {self.task_id}, Attempts Left: {self.attempts_left}")
             if self.attempts_left:
                 retry_queue.put_nowait(self)
             else:
@@ -243,7 +245,7 @@ class AsyncLLM:
         max_tokens_per_minute=None,
         max_concurrent_requests=None,
         max_rps=False,
-        max_attempts=5,
+        max_attempts=3,
         token_encoding_name="cl100k_base",
         logging_level=logging.INFO,
         gen_type="chat",
@@ -696,7 +698,7 @@ class AsyncLLM:
                             # update counters
                             available_request_capacity -= 1
                             available_token_capacity -= next_request_tokens
-                            next_request.attempts_left -= 1
+                            # next_request.attempts_left -= 1
 
                             asyncio.create_task(
                                 next_request.call_api(
