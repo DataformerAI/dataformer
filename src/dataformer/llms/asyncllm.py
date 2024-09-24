@@ -297,7 +297,9 @@ class AsyncLLM:
             raise ValueError("Model not provided.")
         if self.url=="":
             self.url = self.get_request_url()
-        self.check_model_exists(self.url,self.api_provider,self.api_key,self.model)
+        # Skip check_model_exists if URL is provided
+        if not url:
+            self.check_model_exists(self.url, self.api_provider, self.api_key, self.model)
         if self.api_provider == "together":
             self.max_rps = True
 
