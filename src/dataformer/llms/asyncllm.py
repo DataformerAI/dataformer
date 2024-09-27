@@ -606,9 +606,12 @@ class AsyncLLM:
                                             "api_key": api_key,
                                         }
                             #delete the extra keys used above
-                            del request_json["api_key"]
-                            del request_json["url"]
-                            del request_json["api_provider"]
+                            if "api_key" in request_json:
+                                del request_json["api_key"]
+                            if "url" in request_json:
+                                del request_json["url"]
+                            if "api_provider" in request_json:
+                                del request_json["api_provider"]
                             active_task_id = next(self.task_id_generator)
                             if second_request:
                                 #when iterating and task ids are not in series like 1,2,3 more difference like 3,6 and so on  
