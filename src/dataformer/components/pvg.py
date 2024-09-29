@@ -177,29 +177,32 @@ class pvg:
                 else:
                     logger.debug(f"No improvement in round {round + 1}. Best score remains {best_score}")
                     
-                if round < self.num_rounds - 1:
-                    logger.debug("Refining query for next round")
-                    refine_prompt = f"""
-                    Based on the original query and the best solution so far, suggest a refined query that might lead to an even better solution.
-                    Focus on aspects of the problem that were challenging or not fully addressed in the best solution.
-                    Maintain the core intent of the original query while adding specificity or context that could improve the solution.
-                    
-                    Original query: {initial_query}
-                    
-                    Best solution so far: {best_solution_list[i]}
-                    
-                    Refined query:
-                    """
-                    messages = [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": refine_prompt}
-                    ]
-                    request_list_refine.append({"messages":messages,"temperature":0.5})
+            if round < self.num_rounds - 1:
+                    for j in range(len(request_list_modified)):
+                        system_prompt= request_list_modified[j][0]
+                        initial_query = request_list_modified[j][1]
+                        logger.debug("Refining query for next round")
+                        refine_prompt = f"""
+                        Based on the original query and the best solution so far, suggest a refined query that might lead to an even better solution.
+                        Focus on aspects of the problem that were challenging or not fully addressed in the best solution.
+                        Maintain the core intent of the original query while adding specificity or context that could improve the solution.
+                        
+                        Original query: {initial_query}
+                        
+                        Best solution so far: {best_solution_list[j]}
+                        
+                        Refined query:
+                        """
+                        messages = [
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": refine_prompt}
+                        ]
+                        request_list_refine.append({"messages":messages,"temperature":0.5})
 
-            if round < self.num_rounds - 1:        
-                response_listt = self.llm.generate(request_list_refine)
-                print(len(response_listt),len(request_list_modified))
-                for k in range(len(request_list_modified)):
-                    request_list_modified[k][1] = response_listt[k][1]['choices'][0]['message']['content']
+           
+                    response_listt = self.llm.generate(request_list_refine)
+                    print(len(response_listt),len(request_list_modified))
+                    for k in range(len(request_list_modified)):
+                        request_list_modified[k][1] = response_listt[k][1]['choices'][0]['message']['content']
 
         return best_solution_list
