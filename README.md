@@ -5,17 +5,11 @@
 <h3 align="center">Solving data for LLMs - Create quality synthetic datasets!</h3>
 
 <p align="center">
-  <a href="https://x.com/dataformer_ai">
-    <img src="https://img.shields.io/badge/twitter-black?logo=x"/>
-  </a>
-  <a href="https://www.linkedin.com/company/dataformer">
-    <img src="https://img.shields.io/badge/linkedin-blue?logo=linkedin"/>
-  </a>
   <a href="https://dataformer.ai/discord">
-    <img src="https://img.shields.io/badge/Discord-7289DA?&logo=discord&logoColor=white"/>
+    <img width="90" height="30" src="https://img.shields.io/badge/Discord-7289DA?&logo=discord&logoColor=white"/>
   </a>
   <a href="https://dataformer.ai/call">
-    <img src="https://img.shields.io/badge/book_a_call-00897B?&logo=googlemeet&logoColor=white"/>
+    <img width="120" height="30" src="https://img.shields.io/badge/book_a_call-00897B?&logo=googlemeet&logoColor=white"/>
   </a>
 </p>
 
