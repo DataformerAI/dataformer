@@ -18,6 +18,7 @@ nav:
       - PDF to QA Dataset: tutorials/pdf_qa.md
   - 🛠️ Components:
       - components/index.md
+      - Async LLM: components/async_llm.md
       - Evol Instruct: components/evol_instruct.md
       - Evol Quality: components/evol_quality.md
   - ❤️ Community: community/index.md
@@ -31,8 +32,8 @@ validation:
 # Material-Docs Theme
 theme:
   name: material
-  logo: ''
-  favicon: _static/favicon.ico
+  logo: _static/dataformer.png
+  favicon: _static/dataformer.png
   palette:
     # Palette toggle for automatic mode
     - media: "(prefers-color-scheme)"
