@@ -15,81 +15,55 @@ Dataformer is an open-source library to create high quality synthetic datasets -
 
 You just need a single line of code to use your favourite api provider or local LLM.
 
+# ✨ Introduction
+
+Dataformer is a library that provides tools to streamline the generation of synthetic datasets. It is designed to help you create high-quality datasets with ease and confidence.
 
 <div class="grid cards" markdown>
 - 🚀 **Get Started**
 
-    Install with `pip` and get started to generate your first dataset with Dataformer.
+    Install with `pip` and get started with Dataformer using these tutorials.
 
     [:octicons-arrow-right-24: Get Started](getstarted/index.md)
 
+- 📚 **Core Concepts**
 
-- ✅️ **Tutorials**
+    In-depth explanation and discussion of the concepts and workings of different features available in Dataformer.
 
-    Practical guides to help you achieve a specific goals. Learn how to use Dataformer to solve real-world problems.
+    [:octicons-arrow-right-24: Core Concepts](concepts/index.md)
 
-    [:octicons-arrow-right-24: Tutorials](tutorials/index.md)
+- 🛠️ **How-to Guides**
 
+    Practical guides to help you achieve specific goals. Take a look at these guides to learn how to use Dataformer to solve real-world problems.
+
+    [:octicons-arrow-right-24: How-to Guides](howtos/index.md)
+
+- 📖 **References**
+
+    Technical descriptions of how Dataformer classes and methods work.
+
+    [:octicons-arrow-right-24: References](references/index.md)
 
 </div>
 
-### One API, Multiple Providers
+## Frequently Asked Questions
 
-We integrate with **multiple LLM providers** using one unified API and allow you to make parallel async API calls while respecting rate-limits. We offer the option to cache responses from LLM providers, minimizing redundant API calls and directly reducing operational expenses.
+<div class="toggle-list"><span class="arrow">▶</span> What is Dataformer and how does it work?</div>
+<div style="display: none;">
+    Dataformer is an open-source library designed for generating synthetic datasets. It leverages various LLM providers to create high-quality data efficiently. By using a unified API, it allows users to make parallel asynchronous API calls while managing rate limits effectively.
+</div>
 
-### Research-Backed Iteration at Scale
- 
-Leverage state-of-the-art research papers to generate synthetic data while ensuring **adaptability, scalability, and resilience**. Shift your focus from infrastructure concerns to refining your data and enhancing your models.
+<div class="toggle-list"><span class="arrow">▶</span> How can I choose the right LLM provider?</div>
+<div style="display: none;">
+    The choice of LLM provider depends on your specific needs, such as the type of data you want to generate and the performance characteristics of the provider. It's advisable to evaluate different providers based on their capabilities, pricing, and community support.
+</div>
 
-## Installation
+<div class="toggle-list"><span class="arrow">▶</span> What should I do if I encounter issues with data generation?</div>
+<div style="display: none;">
+    If you face issues, first check the troubleshooting section in the documentation. If the problem persists, consider reaching out to the community on Discord for assistance or consult the relevant GitHub issues for similar problems.
+</div>
 
-PyPi (Stable)
-```
-pip install dataformer
-```
-
-Github Source (Latest):
-```
-pip install dataformer@git+https://github.com/DataformerAI/dataformer.git 
-```
-
-Using Git (Development):
-```
-git clone https://github.com/DataformerAI/dataformer.git
-cd dataformer
-pip install -e .
-```
-## Quick Start
-
-AsyncLLM supports various API providers, including:
-- OpenAI
-- Groq
-- Together
-- DeepInfra
-- OpenRouter
-
-Choose the provider that best suits your needs!
-
-Here's a quick example of how to use Dataformer's AsyncLLM for efficient asynchronous generation:
-```python
-from dataformer.llms import AsyncLLM
-from dataformer.utils import get_request_list, get_messages
-from datasets import load_dataset
-
-# Load a sample dataset
-dataset = load_dataset("dataformer/self-knowledge", split="train").select(range(3))
-instructions = [example["question"] for example in dataset]
-
-# Prepare the request list
-sampling_params = {"temperature": 0.7}
-request_list = get_request_list(instructions, sampling_params)
-
-# Initialize AsyncLLM with your preferred API provider
-llm = AsyncLLM(api_provider="groq", model="llama-3.1-8b-instant")
-
-# Generate responses asynchronously
-response_list = get_messages(llm.generate(request_list))
-```
-## Contribute
-
-We welcome contributions! Check our issues or open a new one to get started.
+<div class="toggle-list"><span class="arrow">▶</span> How can I customize the data generation process?</div>
+<div style="display: none;">
+    You can customize the data generation process by adjusting the sampling parameters and the instructions provided to the LLM. Detailed examples can be found in the How-to Guides section.
+</div>
