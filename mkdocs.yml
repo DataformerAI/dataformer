@@ -11,15 +11,34 @@ nav:
   - 🚀 Get Started:
       - getstarted/index.md
       - Installation: getstarted/install.md
+      - Text: getstarted/text.md
       - Generate Synthetic Dataset: getstarted/dataset_generation.md
+      - TopicQA: getstarted/Topicqa.md
+      - Interface Compute Method: getstarted/Interface.md
+      - Cache Management: getstarted/caching_request.md  
+      - Complexity Score: getstarted/ComplexityScore.md
+      - Deita: getstarted/deita.md
+      - Embedding: getstarted/Embedding.md
+      - EvolInstruct: getstarted/Evolinstruct.md
+      - EvolQuality: getstarted/EvolQuality.md
+      - MixtureofAgent: getstarted/MixofAgent.md
+      - Ollama: getstarted/Ollama.md
+      - Quality: getstarted/Quality.md
   - ✅️ Tutorials:
       - tutorials/index.md
       - AI Characters Dataset:  tutorials/ai_character.md
       - PDF to QA Dataset: tutorials/pdf_qa.md
   - 🛠️ Components:
       - components/index.md
+      - Async LLM: components/async_llm.md
       - Evol Instruct: components/evol_instruct.md
       - Evol Quality: components/evol_quality.md
+      - Complexity: components/Complexity.md
+      - ChainofThought: components/Cot.md
+      - Round Trip Optimization: components/Rto.md
+      - Problem Verification Game: components/Pvg.md
+      - MagPie: components/Magpie.md
+      - Quality Score: components/Quality_Score.md
   - ❤️ Community: community/index.md
 
 # https://www.mkdocs.org/user-guide/configuration/#validation
@@ -31,8 +50,8 @@ validation:
 # Material-Docs Theme
 theme:
   name: material
-  logo: ''
-  favicon: _static/favicon.ico
+  logo: _static/dataformer.png
+  favicon: _static/dataformer.png
   palette:
     # Palette toggle for automatic mode
     - media: "(prefers-color-scheme)"
